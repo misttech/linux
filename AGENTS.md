@@ -222,3 +222,14 @@ Rules for every role:
 - Work on real in-tree files. A report is not an implementation.
 - A step counts as done only when `git status` shows it.
 - A review is invalid if the diff is empty.
+
+## Building
+
+Project decision: this tree is never built in place, because an in-tree
+`.config` breaks out-of-tree builds. Build, boot, test and benchmark through
+linux-rust's `scripts/`. Its `AGENTS.md` lists the commands and the
+environment variables that set every location.
+
+Build every port twice, with `CONFIG_RUST_KERNEL=n` and `=y`. Kernel builds
+take minutes, so give them long timeouts. Prefer the build-free tests in the
+harness while iterating.
