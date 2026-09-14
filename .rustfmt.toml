@@ -1,4 +1,7 @@
-edition = "2021"
+edition = "2024"
+# Parse edition 2024 syntax, but keep the 2021 formatting style so existing
+# code does not need reformatting.
+style_edition = "2021"
 newline_style = "Unix"
 
 # Unstable options that help catching some mistakes in formatting and that we may want to enable
