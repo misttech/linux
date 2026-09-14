@@ -223,6 +223,32 @@ Rules for every role:
 - A step counts as done only when `git status` shows it.
 - A review is invalid if the diff is empty.
 
+### Worktrees and branches
+
+**Agents work in a git worktree, never in the primary checkout.** Worktrees live
+in `.worktree/` at the repo root — ignored, so an agent's tree is never a source
+of stray untracked files in someone else's `git status`. One agent, one
+worktree, one branch: a second agent editing the same working tree turns two
+independent changes into one unreviewable diff, and a rebase under a running
+build breaks the tree out from under it.
+
+```bash
+git worktree add .worktree/<name> -b <agent>/<model>/<feature|fix>/<name>
+git worktree remove .worktree/<name>    # when the branch has landed
+```
+
+Every branch is named `<agent>/<model>/<feature|fix>/<name>` — who ran it, what
+model, what kind of change, and what it touches. The prefix is what makes agent
+work attributable after the fact; a bare `fix-parser` says nothing about where
+it came from.
+
+| segment | value |
+|---|---|
+| `<agent>` | the agent that did the work — `claude`, `codex`, `cursor` |
+| `<model>` | the model behind it — `opus-5`, `gpt-5`, `grok-4-5` |
+| `<feature\|fix>` | `feature` or `fix` |
+| `<name>` | kebab-case subject, matching the worktree directory |
+
 ## Building
 
 Project decision: this tree is never built in place, because an in-tree
