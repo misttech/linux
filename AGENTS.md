@@ -249,6 +249,20 @@ it came from.
 | `<feature\|fix>` | `feature` or `fix` |
 | `<name>` | kebab-case subject, matching the worktree directory |
 
+### Branch model
+
+Project decisions:
+- **`linux-rust` is the work branch.** Agent branches start from it and
+  land back on it.
+- **`master` stays in sync with upstream** and carries no project commits.
+- **Update by rebasing, never merging.** Rebase `linux-rust` onto `master`,
+  then rebase any open agent branches onto the new `linux-rust`.
+
+```bash
+git fetch origin master:master    # fast-forward master to upstream
+git rebase master linux-rust      # replay the work on top
+```
+
 ## Building
 
 Project decision: this tree is never built in place, because an in-tree
