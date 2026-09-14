@@ -233,3 +233,17 @@ environment variables that set every location.
 Build every port twice, with `CONFIG_RUST_KERNEL=n` and `=y`. Kernel builds
 take minutes, so give them long timeouts. Prefer the build-free tests in the
 harness while iterating.
+
+## Style and contributions
+
+- Follow `Documentation/rust/coding-guidelines.rst` and
+  `Documentation/process/coding-style.rst`. Match local style over "best
+  practice".
+- Follow `Documentation/process/coding-assistants.rst`: **never add
+  `Signed-off-by`**. Add `Assisted-by: LLM [tools]` instead.
+- All code is GPL-2.0-only and every file carries an SPDX identifier.
+- Keep the in-body comments of `<unit>.c` in `<unit>.rs`, renaming
+  identifiers as needed.
+- Do not add dependencies to kernel code. Tooling in linux-rust may add them
+  when the reason is stated.
+- Do not glob the whole tree. Scope searches to the directories involved.
