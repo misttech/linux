@@ -209,6 +209,7 @@
     // Files that are excluded from file-watching notifications.
     "files.watcherExclude": {
       "**/.git/**": true,
+      "**/.worktree/**": true,
       "**/*.o": true,
       "**/*.cmd": true,
       "**/.*.cmd": true,
