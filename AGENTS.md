@@ -247,3 +247,12 @@ harness while iterating.
 - Do not add dependencies to kernel code. Tooling in linux-rust may add them
   when the reason is stated.
 - Do not glob the whole tree. Scope searches to the directories involved.
+
+## Commits
+
+Project decision: commits in this tree use kernel style.
+
+- Subject `subsystem: summary`, imperative, lower case after the prefix.
+- Body wrapped at 72 columns, explaining the reason and intention.
+- `Assisted-by:` trailer, never `Signed-off-by` (see above).
+- linux-rust uses its own scheme; see its `AGENTS.md`.
