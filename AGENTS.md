@@ -160,3 +160,19 @@ contract>`. An `unsafe` that fits no class is rejected, not argued for.
 
 `unsafe fn` needs a `# Safety` section. Every unit records its `unsafe` budget
 (a count per tag). Code that *uses* an abstraction has a budget of 0.
+
+## Common kernel lib: `kr`
+
+`rust/kr/` is the zero-dependency core crate (only `core`), modeled on
+Zircon's `zr`. Replacements and the harness share it, so every unit
+compiles in both places without changes. Nothing may be added to `kr` that
+depends on `kernel`, `bindings` or another in-tree crate.
+
+| Use | For |
+|-----|-----|
+| `kr::static_assert_layout!(T, size = S, align = A, field @ OFF, ...)` | **Every** `#[repr(C)]` mirror: exact size, align, and every field offset, with values taken from BTF |
+| `kr::static_assert!` | Other compile-time facts |
+| `kr::Opaque<T>`, `kr::OpaqueBytes<N>` | Fields that are unported or config-dependent |
+| `kr::defer` | Scope-exit cleanup |
+
+Size is asserted as equal, never `<=`, because the mirror *is* the C type.
