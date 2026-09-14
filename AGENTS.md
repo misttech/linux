@@ -256,3 +256,18 @@ Project decision: commits in this tree use kernel style.
 - Body wrapped at 72 columns, explaining the reason and intention.
 - `Assisted-by:` trailer, never `Signed-off-by` (see above).
 - linux-rust uses its own scheme; see its `AGENTS.md`.
+
+## References
+
+Fuchsia checkout: `/home/bherrera/Projects/misttech/fuchsia-mist`
+
+- `zircon/kernel/main.rs`: a single crate root, with `#[path]` modules that
+  sit beside the C++ they replace.
+- `zircon/kernel/platform/timer_ffi.cc`: the shape of an `_ffi` file.
+- `zircon/skills/cpp-to-rust-rubric/SKILL.md`: layout parity, FFI, comment
+  parity and pitfalls.
+- `zircon/skills/cpp-to-rust/SKILL.md`: the coder/reviewer orchestration loop
+  and the git verification gate.
+- `zircon/skills/fbl-intrusive-porting/SKILL.md`: intrusive containers and
+  refcounting.
+- `src/lib/zr/`: the model for `kr`.
