@@ -8,7 +8,9 @@
 
 #![cfg_attr(not(test), no_std)]
 
+mod defer;
 mod opaque;
 mod static_assert;
 
+pub use defer::{defer, Deferred};
 pub use opaque::{Opaque, OpaqueBytes};
