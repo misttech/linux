@@ -46,3 +46,14 @@ Porting is one mechanical transformation, applied a few hundred times:
 Most of these steps can be checked by a machine, so agent output is
 **certified by checks, not reviewed line by line**. The hypothesis under
 test is that loop, not Rust and not Linux.
+
+### Value case
+
+- **Not performance.** Expect parity. arm64 carries a real regression risk:
+  Rust cannot express LKMM dependency ordering, so `rcu_dereference` becomes
+  `Ordering::Acquire`.
+- **Not a direct CVE reduction.** Recent CVEs are in leaves (nvmem, ksmbd,
+  nfsd, KVM), not in core.
+- **The gain is second-order.** Most leaf bugs misuse a core primitive. Once
+  `KRef<T>`, `RcuPtr<T>` and the branded intrusive list encode their
+  invariants in types, leaves written against them cannot make those mistakes.
