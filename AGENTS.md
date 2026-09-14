@@ -194,3 +194,14 @@ Rules:
   `rust/exports.c`, or they are exported twice.
 - **Calls into `c_*` functions are `unsafe` class U1.** The harness
   provides userspace stubs for them.
+
+## One-time wiring (not done yet)
+
+This needs linux-rust's `scripts/make.sh LLVM=1 rustavailable` to pass;
+`bindgen` is missing on the current host.
+
+1. Add `config RUST_KERNEL` to `init/Kconfig`, after `config RUST`.
+2. Add `rust/kr/` and the `main.rs` crate as objects in `rust/Makefile`, the
+   way `ffi.o` is added, passing `@include/generated/rustc_cfg`. Build the
+   `main.rs` crate only under `CONFIG_RUST_KERNEL`.
+3. Register both crates in `scripts/generate_rust_analyzer.py`.
