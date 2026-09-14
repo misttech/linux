@@ -8,4 +8,7 @@
 
 #![cfg_attr(not(test), no_std)]
 
+mod opaque;
 mod static_assert;
+
+pub use opaque::{Opaque, OpaqueBytes};
