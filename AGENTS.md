@@ -81,3 +81,15 @@ not change them.
 - **Behavior:** a userspace harness in linux-rust builds the real
   `lib/refcount.c` and `lib/refcount.rs` against the real header, and tests
   them differentially.
+
+### Kill criteria
+
+Stop the project and report if any of these holds:
+
+1. Layout cannot be pinned across configs, which makes the dual C/Rust model
+   unsound.
+2. `loom` cannot validate the ordering without contortions.
+3. `KRef` needs `unsafe` at most call sites, so the abstraction buys nothing.
+
+Every port, review, test and benchmark report states its status against these
+three criteria.
