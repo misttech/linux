@@ -142,3 +142,21 @@ Rules:
   Moving one out of line into Rust changes codegen for every caller, so it
   needs `benchmark-vs-c` first. Header-only units such as `kref` start as a
   typed Rust API in `<dir>/<unit>.rs`.
+
+## `unsafe` taxonomy
+
+Every `unsafe` block is tagged `// SAFETY(Un): <invariant, naming the C
+contract>`. An `unsafe` that fits no class is rejected, not argued for.
+
+| Tag | Class | Justified by |
+|-----|-------|--------------|
+| U1 | FFI call | A documented C function contract |
+| U2 | Layout cast (C ↔ `#[repr(C)]` mirror) | Const layout assertions in the same unit |
+| U3 | Raw deref | A named C invariant (lock held, pointer pinned) |
+| U4 | Refcount lifetime | A held `kref`/`refcount_t` reference |
+| U5 | RCU access | An RCU read-side critical section in scope |
+| U6 | `Send`/`Sync` impl | The C locking rules for the type |
+| U7 | In-place init of C-owned memory | Pinning plus an init contract |
+
+`unsafe fn` needs a `# Safety` section. Every unit records its `unsafe` budget
+(a count per tag). Code that *uses* an abstraction has a budget of 0.
