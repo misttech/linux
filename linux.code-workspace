@@ -183,6 +183,61 @@
         ]
     },
 
+    ////////
+    // VSCode file exclusions
+    //
+
+    // Files that are hidden in the Workspace Explorer (build artifacts).
+    "files.exclude": {
+      "**/.git": true,
+      "**/__pycache__": true,
+      "**/*.o": true,
+      "**/*.o.*": true,
+      "**/*.a": true,
+      "**/*.ko": true,
+      "**/*.mod": true,
+      "**/*.mod.c": true,
+      "**/*.cmd": true,
+      "**/.*.cmd": true,
+      "**/*.d": true,
+      "**/.*.d": true,
+      "**/*.symtypes": true,
+      "**/modules.order": true,
+      "**/.tmp_*": true,
+    },
+
+    // Files that are excluded from file-watching notifications.
+    "files.watcherExclude": {
+      "**/.git/**": true,
+      "**/*.o": true,
+      "**/*.cmd": true,
+      "**/.*.cmd": true,
+      "**/.tmp_*/**": true,
+      ".cache/**": true,
+      "Documentation/output/**": true,
+    },
+
+    // Files that are excluded from search and quick open (^P).
+    "search.exclude": {
+      "**/*.o": true,
+      "**/*.ko": true,
+      "**/*.cmd": true,
+      "**/.*.cmd": true,
+      "**/*.mod.c": true,
+      "**/modules.order": true,
+      "**/.tmp_*": true,
+      ".cache/**": true,
+      "compile_commands.json": true,
+      "rust-project.json": true,
+      "Documentation/output/**": true,
+      "vmlinux*": true,
+      "System.map": true,
+      "Module.symvers": true,
+    },
+    "search.useIgnoreFiles": true,
+    // Don't follow symlinks (e.g. source/ in out-of-tree builds).
+    "search.followSymlinks": false,
+
     // Disable task auto-detection. This significantly speeds up task running.
     "task.autoDetect": "off",
   },
