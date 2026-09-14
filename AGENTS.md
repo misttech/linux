@@ -93,3 +93,52 @@ Stop the project and report if any of these holds:
 
 Every port, review, test and benchmark report states its status against these
 three criteria.
+
+## Where ports live
+
+Paths are relative to this tree, except those marked *(linux-rust)*.
+
+| File | Role |
+|------|------|
+| `<dir>/<unit>.c` | Existing C. Built only when `CONFIG_RUST_KERNEL=n` |
+| `<dir>/<unit>.rs` | The Rust implementation. Exports the C symbols as `#[no_mangle] pub extern "C"` with exact C names and signatures. May also offer a typed Rust API (e.g. `KRef<T>`) |
+| `<dir>/<unit>_ffi.c` | Only when needed; see [FFI](#ffi-unit_ffic) |
+| `include/linux/<unit>.h` | The ABI contract. Unchanged |
+| `main.rs` (tree root) | Crate root, built only when `CONFIG_RUST_KERNEL=y`. One `#[path = "<dir>/<unit>.rs"] mod <unit>;` per port |
+| `harness/<unit>/` *(linux-rust)* | Userspace harness, loom models, benchmarks |
+| `units/<unit>.md` *(linux-rust)* | Unit record: layout source, `unsafe` budget, test and benchmark results, kill-criteria status |
+
+**Why one crate.** In `scripts/Makefile.build`, the `%.o: %.c` rule comes
+before `%.o: %.rs`. A `<unit>.rs` next to `<unit>.c` therefore cannot build
+as its own `<unit>.o`. All ports compile into one crate rooted at `main.rs`,
+the way Zircon roots its kernel Rust at `zircon/kernel/main.rs`.
+
+**Gate: `CONFIG_RUST_KERNEL`.** A single option switches every ported unit
+together. Do not add per-unit options. It is defined in `init/Kconfig`,
+right after `config RUST`, and every unit's Makefile uses the same pattern
+(refcount example):
+
+```make
+# init/Kconfig
+config RUST_KERNEL
+	bool "Rust implementation of ported core kernel units"
+	depends on RUST
+
+# lib/Makefile (take refcount.o out of the obj-y list)
+obj-$(if $(CONFIG_RUST_KERNEL),,y) += refcount.o
+obj-$(CONFIG_RUST_KERNEL) += refcount_ffi.o
+```
+
+This option is unrelated to `CONFIG_RUST_KERNEL_DOCTESTS`.
+
+Rules:
+- **Dependencies.** A replacement depends only on `core`, `kr`, and its own
+  `extern "C"` declarations. It never depends on the `kernel` or `bindings`
+  crates. Those are bindings over the C being replaced, and the port must
+  also build in the harness.
+- **Exports.** Every exported symbol keeps its C name, signature and export
+  license.
+- **Header inlines.** `static inline` functions in the header stay in C.
+  Moving one out of line into Rust changes codegen for every caller, so it
+  needs `benchmark-vs-c` first. Header-only units such as `kref` start as a
+  typed Rust API in `<dir>/<unit>.rs`.
