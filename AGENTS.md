@@ -176,3 +176,21 @@ depends on `kernel`, `bindings` or another in-tree crate.
 | `kr::defer` | Scope-exit cleanup |
 
 Size is asserted as equal, never `<=`, because the mirror *is* the C type.
+
+## FFI: `<unit>_ffi.c`
+
+Create one only when needed, next to the unit, the way Zircon uses
+`*_ffi.cc`. It holds two kinds of declarative content and nothing else:
+
+| Content | Why | Form |
+|---------|-----|------|
+| Export lines for symbols implemented in Rust | `rust/exports.c` exports every Rust symbol as GPL-only, but the port must keep the original license | `EXPORT_SYMBOL(refcount_dec_if_one);`, copied from `<unit>.c` |
+| Wrappers for C inlines and macros the Rust code calls (`WARN_ONCE`, `mutex_lock`, ...) | Rust cannot call these directly, and it must not use `bindings` | `c_<unit>_<fn>`. The prototype sits above the definition in the same file (`-Wmissing-prototypes`), and `<unit>.rs` declares it in `extern "C"` |
+
+Rules:
+- **No logic.** A wrapper is a single forwarding call.
+- **Build it** with `obj-$(CONFIG_RUST_KERNEL) += <unit>_ffi.o`.
+- **Single export path.** The crate's symbols must never also go through
+  `rust/exports.c`, or they are exported twice.
+- **Calls into `c_*` functions are `unsafe` class U1.** The harness
+  provides userspace stubs for them.
