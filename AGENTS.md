@@ -57,3 +57,18 @@ test is that loop, not Rust and not Linux.
 - **The gain is second-order.** Most leaf bugs misuse a core primitive. Once
   `KRef<T>`, `RcuPtr<T>` and the branded intrusive list encode their
   invariants in types, leaves written against them cannot make those mistakes.
+
+### Starting point: `refcount_t` / `kref`
+
+This unit separates the bridge problem from the layout problem, and it forces
+the highest-risk design decision first. `KRef<T>`:
+
+- mirrors `kref`'s embedded-count layout exactly;
+- is **never** `Arc`;
+- **never** hands out `&mut T`;
+- **never** reasons about uniqueness, because C may hold a reference Rust
+  cannot see.
+
+`rust/kernel/sync/refcount.rs` and `rust/kernel/sync/aref.rs` are bindings
+over the C implementation. They are not the model for ports, and ports do
+not change them.
