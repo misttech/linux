@@ -72,3 +72,12 @@ the highest-risk design decision first. `KRef<T>`:
 `rust/kernel/sync/refcount.rs` and `rust/kernel/sync/aref.rs` are bindings
 over the C implementation. They are not the model for ports, and ports do
 not change them.
+
+### Testing needs no kernel build
+
+- **Layout:** BTF from running distro kernels gives real layouts across real
+  configs.
+- **Memory ordering:** validated with `loom`.
+- **Behavior:** a userspace harness in linux-rust builds the real
+  `lib/refcount.c` and `lib/refcount.rs` against the real header, and tests
+  them differentially.
