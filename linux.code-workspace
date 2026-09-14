@@ -103,6 +103,56 @@
     "git.detectSubmodules": false,
 
     ////////
+    // Rust
+    //
+    "[rust]": {
+      "editor.insertSpaces": true,
+      "editor.tabSize": 4,
+      "editor.rulers": [
+        100
+      ],
+      "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    },
+
+    // This works around an OOM issue with the vscode extension-host's
+    // implementation of file-watching.
+    // see:  https://github.com/rust-lang/rust-analyzer/issues/12572
+    "rust-analyzer.files.watcher": "server",
+
+    // rust-project.json is discovered in the tree root, where linux-rust's
+    // `scripts/make.sh LLVM=1 rust-analyzer` links it.
+
+    // The kernel is not a cargo project; checking via cargo would fail.
+    "rust-analyzer.check.overrideCommand": null,
+    "rust-analyzer.checkOnSave": false,
+    "rust-analyzer.cargo.buildScripts.enable": false,
+
+    // Use the kernel's rustfmt configuration.
+    "rust-analyzer.rustfmt.overrideCommand": [
+      "rustfmt",
+      "--config-path=${workspaceFolder}/.rustfmt.toml"
+    ],
+
+    ////////
+    // C
+
+    "clangd.arguments": [
+        "--background-index",
+        "--header-insertion=never",
+        // compile_commands.json is found in the tree root, where linux-rust's
+        // `scripts/make.sh compile_commands.json` links it.
+        // The kernel builds with GCC by default; don't let clang-tidy flood
+        // diagnostics.
+        "--clang-tidy=false",
+    ],
+
+    "[c]": {
+      "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+      // Kernel code is not uniformly clang-formatted; format explicitly.
+      "editor.formatOnSave": false
+    },
+
+    ////////
     // Python
     //
     "[python]": {
