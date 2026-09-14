@@ -1,0 +1,139 @@
+{
+  // VSCode workspace for the kernel tree. Open this file instead of opening
+  // the directory directly.
+  //
+  // Project decision: this workspace has no tasks, and this tree is never
+  // built in place. Build, boot, test and benchmark from linux-rust. Its
+  // scripts link compile_commands.json and rust-project.json into this tree's
+  // root, where clangd and rust-analyzer find them.
+  //
+  // Project decision: this workspace is the supported editor setup for this
+  // tree. See AGENTS.md for project direction.
+  //
+  // Settings precedence (merged in order):
+  //  0) default settings
+  //  1) user's settings
+  //  2) remote machine settings
+  //  3) workspace settings  (this file)
+  //  4) workspace folder settings
+  //
+  // See https://code.visualstudio.com/docs/getstarted/settings#_settings-precedence
+
+  ////////
+  // VSCode Workspace Contents
+  "folders": [
+    {
+      // The whole kernel tree.
+      "path": "."
+    }
+  ],
+
+  ////////
+  // Recommended Extensions
+  //
+  "extensions": {
+    "recommendations": [
+      // The official Clang LSP for C. Uses compile_commands.json.
+      "llvm-vs-code-extensions.vscode-clangd",
+
+      // The official LSP for Rust (rust/ and Rust drivers).
+      "rust-lang.rust-analyzer",
+
+      // Python for scripts/ and tools/.
+      "ms-python.python",
+
+      // Kconfig syntax and navigation.
+      "luveti.kconfig",
+
+      // Devicetree (.dts/.dtsi) syntax and navigation.
+      "plorefice.devicetree",
+
+      // reStructuredText for Documentation/.
+      "lextudio.restructuredtext",
+
+      // GNU assembler syntax for .S files.
+      "13xforever.language-x86-64-assembly",
+
+      // Enforces .editorconfig.
+      "editorconfig.editorconfig",
+    ],
+
+    "unwantedRecommendations": [
+      // Conflicts with vscode-clangd intellisense, and vscode-clangd is the
+      // preferred C extension.
+      "ms-vscode.cpptools",
+    ]
+  },
+
+
+  "settings": {
+    ////////
+    // Extra file associations (patterns to languages)
+    "files.associations": {
+      "Kconfig*": "kconfig",
+      "Kbuild*": "makefile",
+      "Makefile.*": "makefile",
+      "*.mk": "makefile",
+      "*.h": "c",
+      "*.S": "asm-intel-x86-generic",
+      "*.dts": "dts",
+      "*.dtsi": "dts",
+      "*.dtso": "dts",
+      "*.rst": "restructuredtext",
+      "*.cocci": "plaintext",
+    },
+
+    ////////
+    // Kernel coding style (Documentation/process/coding-style.rst)
+    "editor.insertSpaces": false,
+    "editor.tabSize": 8,
+    "editor.detectIndentation": false,
+    "editor.rulers": [
+        80,
+        100
+    ],
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+
+    // Disable graph visualization of incoming/outgoing changes. The kernel's
+    // history is very deep and this causes infinite loading in the
+    // "Source Control" tab.
+    "scm.showHistoryGraph": false,
+    "git.detectSubmodules": false,
+
+    ////////
+    // Python
+    //
+    "[python]": {
+      "editor.insertSpaces": true,
+      "editor.tabSize": 4
+    },
+
+    ////////
+    // Makefiles need tabs.
+    "[makefile]": {
+      "editor.insertSpaces": false,
+      "editor.tabSize": 8
+    },
+
+    ////////
+    // Documentation
+    //
+    "[restructuredtext]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.rulers": [
+            80
+        ]
+    },
+    "[markdown]": {
+        "editor.rulers": [
+            80
+        ]
+    },
+
+    // Disable task auto-detection. This significantly speeds up task running.
+    "task.autoDetect": "off",
+  },
+}
