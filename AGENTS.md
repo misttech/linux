@@ -205,3 +205,20 @@ This needs linux-rust's `scripts/make.sh LLVM=1 rustavailable` to pass;
    way `ffi.o` is added, passing `@include/generated/rustc_cfg`. Build the
    `main.rs` crate only under `CONFIG_RUST_KERNEL`.
 3. Register both crates in `scripts/generate_rust_analyzer.py`.
+
+## Workflow
+
+Each skill is one role, and each hands off to the next:
+
+| Skill | Lives in | Role | Writes code |
+|-------|----------|------|-------------|
+| `port-c-to-rust` | this tree | Replace one C unit | Yes |
+| `review-rust-port` | this tree | Certify a port against this file | No |
+| `test-rust-port` | linux-rust | Layout, loom, differential, KUnit | Tests only |
+| `benchmark-vs-c` | linux-rust | Performance vs C, x86_64 and arm64 | Benchmarks only |
+
+Rules for every role:
+
+- Work on real in-tree files. A report is not an implementation.
+- A step counts as done only when `git status` shows it.
+- A review is invalid if the diff is empty.
