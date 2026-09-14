@@ -271,3 +271,8 @@ Fuchsia checkout: `/home/bherrera/Projects/misttech/fuchsia-mist`
 - `zircon/skills/fbl-intrusive-porting/SKILL.md`: intrusive containers and
   refcounting.
 - `src/lib/zr/`: the model for `kr`.
+
+## Updating this file
+
+If agents keep making the same mistake, or a decision changes, propose an edit
+here. Do not add workarounds in code.
