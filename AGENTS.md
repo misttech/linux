@@ -104,7 +104,7 @@ Paths are relative to this tree, except those marked *(linux-rust)*.
 | `<dir>/<unit>.rs` | The Rust implementation. Exports the C symbols as `#[no_mangle] pub extern "C"` with exact C names and signatures. May also offer a typed Rust API (e.g. `KRef<T>`) |
 | `<dir>/<unit>_ffi.c` | Only when needed; see [FFI](#ffi-unit_ffic) |
 | `include/linux/<unit>.h` | The ABI contract. Unchanged |
-| `main.rs` (tree root) | Crate root, built only when `CONFIG_RUST_KERNEL=y`. One `#[path = "<dir>/<unit>.rs"] mod <unit>;` per port |
+| `main.rs` (tree root) | Crate root, built only when `CONFIG_RUST_KERNEL=y`. One `#[path = "<dir>/<unit>.rs"] pub mod <unit>;` per port |
 | `harness/<unit>/` *(linux-rust)* | Userspace harness, loom models, benchmarks |
 | `units/<unit>.md` *(linux-rust)* | Unit record: layout source, `unsafe` budget, test and benchmark results, kill-criteria status |
 
