@@ -214,6 +214,203 @@ extern "C" {
     fn c_rcuref_warn_imbalanced_put();
 
     fn c_rcuref_acquire_after_ctrl_dep();
+
+    #[cfg(CONFIG_PROVE_RCU)]
+    fn c_rcuref_lockdep_warn_put();
+    fn c_rcuref_preempt_disable();
+    fn c_rcuref_preempt_enable();
+}
+
+impl rcuref_t {
+    /// `RCUREF_INIT(i)`: a reference count with `cnt` held references.
+    pub const fn new(cnt: u32) -> Self {
+        Self {
+            refcnt: atomic_t::new(cnt.wrapping_sub(1) as i32),
+        }
+    }
+
+    /// `rcuref_init()`: initialize a rcuref reference count with the given
+    /// reference count, typically '1'.
+    #[inline]
+    pub fn init(&self, cnt: u32) {
+        self.refcnt.counter().set(cnt.wrapping_sub(1) as i32);
+    }
+
+    /// The raw counter value, which the zones of the theory of operation
+    /// above describe.
+    ///
+    /// Callers that hold references want [`read()`](Self::read); this is for
+    /// code that reasons about the zones, such as the tests.
+    #[inline]
+    pub fn raw(&self) -> u32 {
+        self.refcnt.counter().read() as u32
+    }
+
+    /// `rcuref_read()`: read the number of held reference counts of a rcuref.
+    ///
+    /// Returns the number of held references (0 ... N). The value 0 does not
+    /// indicate that it is safe to schedule the object, protected by this
+    /// reference counter, for deconstruction. If you want to know if the
+    /// reference counter has been marked DEAD (as signaled by
+    /// [`put()`](Self::put)) please use [`is_dead()`](Self::is_dead).
+    #[inline]
+    pub fn read(&self) -> u32 {
+        let c = self.raw();
+
+        // Return 0 if within the DEAD zone.
+        if c >= RCUREF_RELEASED {
+            0
+        } else {
+            c.wrapping_add(1)
+        }
+    }
+
+    /// `rcuref_is_dead()`: check if the rcuref has been already marked dead.
+    ///
+    /// Returns true if the object has been marked DEAD. This signals that a
+    /// previous invocation of [`put()`](Self::put) returned true on this
+    /// reference counter meaning the protected object can safely be scheduled
+    /// for deconstruction. Otherwise, returns false.
+    #[inline]
+    pub fn is_dead(&self) -> bool {
+        let c = self.raw();
+
+        (RCUREF_RELEASED..RCUREF_NOREF).contains(&c)
+    }
+
+    /// `rcuref_get()`: acquire one reference on a rcuref reference count.
+    ///
+    /// Similar to `atomic_inc_not_zero()` but saturates at [`RCUREF_MAXREF`].
+    ///
+    /// Provides no memory ordering, it is assumed the caller has guaranteed
+    /// the object memory to be stable (RCU, etc.), which `&self` is. It does
+    /// provide a control dependency and thereby orders future stores.
+    ///
+    /// Returns false if the attempt to acquire a reference failed. This
+    /// happens when the last reference has been put already.
+    ///
+    /// Returns true if a reference was successfully acquired.
+    #[inline]
+    #[must_use]
+    pub fn get(&self) -> bool {
+        get(self.refcnt.counter(), || {
+            // SAFETY: (U1) c_rcuref_warn_saturated() takes no arguments and
+            // only WARN_ONCE()s.
+            unsafe { c_rcuref_warn_saturated() }
+        })
+    }
+
+    /// `rcuref_put()`: release one reference for a rcuref reference count.
+    ///
+    /// Can be invoked from any context.
+    ///
+    /// Provides release memory ordering, such that prior loads and stores are
+    /// done before, and provides an acquire ordering on success such that
+    /// free() must come after.
+    ///
+    /// Returns true if this was the last reference with no future references
+    /// possible. This signals the caller that it can safely schedule the
+    /// object, which is protected by the reference counter, for
+    /// deconstruction.
+    ///
+    /// Returns false if there are still active references or the put() raced
+    /// with a concurrent get()/put() pair. Caller is not allowed to
+    /// deconstruct the protected object.
+    #[inline]
+    #[must_use]
+    pub fn put(&self) -> bool {
+        // SAFETY: (U1) preempt_disable().
+        unsafe { c_rcuref_preempt_disable() };
+        // SAFETY: (U5) preemption is disabled, so no grace period can end
+        // here, which is what put_rcusafe() requires: the object stays alive
+        // until the slowpath is done with it.
+        let released = unsafe { self.put_rcusafe() };
+        // SAFETY: (U1) preempt_enable(), balancing the disable above.
+        unsafe { c_rcuref_preempt_enable() };
+
+        released
+    }
+
+    /// `rcuref_put_rcusafe()`: release one reference for a rcuref reference
+    /// count, RCU safe.
+    ///
+    /// Provides release memory ordering, such that prior loads and stores are
+    /// done before, and provides an acquire ordering on success such that
+    /// free() must come after.
+    ///
+    /// Returns what [`put()`](Self::put) returns.
+    ///
+    /// # Safety
+    ///
+    /// The caller must guarantee that no grace period can happen which would
+    /// free the object concurrently if the decrement drops the last reference
+    /// and the slowpath races against a concurrent get() and put() pair.
+    /// rcu_read_lock()'ed and atomic contexts qualify, and so does
+    /// [`put()`](Self::put), which disables preemption around this call.
+    #[inline]
+    #[must_use]
+    pub unsafe fn put_rcusafe(&self) -> bool {
+        // RCU_LOCKDEP_WARN(): built only with CONFIG_PROVE_RCU, as in
+        // include/linux/rcuref.h, where it compiles to nothing without it.
+        #[cfg(CONFIG_PROVE_RCU)]
+        // SAFETY: (U1) c_rcuref_lockdep_warn_put() takes no arguments and only
+        // RCU_LOCKDEP_WARN()s that this context holds off the grace period.
+        unsafe {
+            c_rcuref_lockdep_warn_put()
+        };
+
+        put(
+            self.refcnt.counter(),
+            || {
+                // SAFETY: (U1) c_rcuref_acquire_after_ctrl_dep() takes no
+                // arguments and only issues smp_acquire__after_ctrl_dep().
+                unsafe { c_rcuref_acquire_after_ctrl_dep() }
+            },
+            || {
+                // SAFETY: (U1) c_rcuref_warn_imbalanced_put() takes no
+                // arguments and only WARN_ONCE()s.
+                unsafe { c_rcuref_warn_imbalanced_put() }
+            },
+        )
+    }
+}
+
+/// The body of `rcuref_get()` in `include/linux/rcuref.h`, generic over the
+/// atomic.
+///
+/// `warn_saturated` is the WARN_ONCE() on saturation.
+pub(crate) fn get(refs: &impl RefsAtomic, warn_saturated: impl FnOnce()) -> bool {
+    // Unconditionally increase the reference count. The saturation and
+    // dead zones provide enough tolerance for this.
+    if refs.fetch_add_relaxed(1).wrapping_add(1) >= 0 {
+        return true;
+    }
+
+    // Handle the cases inside the saturation and dead zones
+    get_slowpath(refs, warn_saturated)
+}
+
+/// The body of `__rcuref_put()` in `include/linux/rcuref.h`, generic over the
+/// atomic. The caller disables preemption, or is in a context that holds off
+/// the grace period.
+///
+/// `acquire_after_ctrl_dep` is `smp_acquire__after_ctrl_dep()`, and
+/// `warn_imbalanced` the WARN_ONCE() on an imbalanced put.
+pub(crate) fn put(
+    refs: &impl RefsAtomic,
+    acquire_after_ctrl_dep: impl FnOnce(),
+    warn_imbalanced: impl FnOnce(),
+) -> bool {
+    // Unconditionally decrease the reference count. The saturation and
+    // dead zones provide enough tolerance for this.
+    let cnt = refs.fetch_sub_release(1).wrapping_sub(1);
+    if cnt >= 0 {
+        return false;
+    }
+
+    // Handle the last reference drop and cases inside the saturation
+    // and dead zones.
+    put_slowpath(refs, cnt as u32, acquire_after_ctrl_dep, warn_imbalanced)
 }
 
 /// `rcuref_get_slowpath()`: slowpath of `rcuref_get()`.

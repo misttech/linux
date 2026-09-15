@@ -8,6 +8,8 @@
 #include <linux/atomic.h>
 #include <linux/bug.h>
 #include <linux/export.h>
+#include <linux/preempt.h>
+#include <linux/rcupdate.h>
 #include <linux/rcuref.h>
 
 EXPORT_SYMBOL_GPL(rcuref_get_slowpath);
@@ -38,4 +40,27 @@ void c_rcuref_acquire_after_ctrl_dep(void);
 void c_rcuref_acquire_after_ctrl_dep(void)
 {
 	smp_acquire__after_ctrl_dep();
+}
+
+/*
+ * The RCU_LOCKDEP_WARN() and the preemption disable of the rcuref_put()
+ * inlines, which the typed Rust API implements in Rust.
+ */
+void c_rcuref_lockdep_warn_put(void);
+void c_rcuref_lockdep_warn_put(void)
+{
+	RCU_LOCKDEP_WARN(!rcu_read_lock_held() && preemptible(),
+			 "suspicious rcuref_put_rcusafe() usage");
+}
+
+void c_rcuref_preempt_disable(void);
+void c_rcuref_preempt_disable(void)
+{
+	preempt_disable();
+}
+
+void c_rcuref_preempt_enable(void);
+void c_rcuref_preempt_enable(void)
+{
+	preempt_enable();
 }
