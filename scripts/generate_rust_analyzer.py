@@ -288,6 +288,12 @@ def generate_crates(
         [core, compiler_builtins],
     )
 
+    kr = append_crate(
+        "kr",
+        srctree / "rust" / "kr" / "lib.rs",
+        [core, compiler_builtins],
+    )
+
     def append_crate_with_generated(
         display_name: str,
         deps: List[Dependency],
@@ -317,6 +323,13 @@ def generate_crates(
     uapi = append_crate_with_generated("uapi", [core, ffi, pin_init])
     kernel = append_crate_with_generated(
         "kernel", [core, macros, build_error, pin_init, ffi, bindings, uapi, zerocopy, zerocopy_derive]
+    )
+
+    append_crate(
+        "main",
+        srctree / "main.rs",
+        [core, compiler_builtins, kr],
+        cfg=generated_cfg,
     )
 
     scripts = srctree / "scripts"
