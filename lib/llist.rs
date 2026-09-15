@@ -11,8 +11,17 @@
 //! architectures that don't have NMI-safe cmpxchg implementation, the list can
 //! NOT be used in NMI handlers. So code that uses the list in an NMI handler
 //! should depend on CONFIG_ARCH_HAVE_NMI_SAFE_CMPXCHG.
+//!
+//! Rust callers use [`LList`], which encodes the locking table of
+//! `include/linux/llist.h` in types: adds and [`LList::del_all()`] are
+//! lock-less from any context, while `llist_del_first()` is only reachable
+//! through the one [`Consumer`] of a list, which excludes every other deleter.
+//! The list does not own its nodes: it holds [`ListItem`] pointers, and hands
+//! them back when they are deleted.
 
-use core::ptr;
+use core::marker::PhantomData;
+use core::mem::ManuallyDrop;
+use core::ptr::{self, NonNull};
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 /// Mirror of `struct llist_node`.
@@ -20,6 +29,21 @@ use core::sync::atomic::{AtomicPtr, Ordering};
 #[repr(C)]
 pub struct llist_node {
     next: AtomicPtr<llist_node>,
+}
+
+impl llist_node {
+    /// A node that is not on any list yet.
+    pub const fn new() -> Self {
+        Self {
+            next: AtomicPtr::new(ptr::null_mut()),
+        }
+    }
+}
+
+impl Default for llist_node {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 /// Mirror of `struct llist_head`.
@@ -56,11 +80,14 @@ pub(crate) trait AtomicLink<T> {
 
     /// `try_cmpxchg()`: on failure, `old` gets the current value.
     fn try_cmpxchg(&self, old: &mut *mut T, new: *mut T) -> bool;
+
+    /// `xchg()`.
+    fn xchg(&self, new: *mut T) -> *mut T;
 }
 
 // The orderings follow the kernel's: smp_load_acquire() is Acquire,
-// try_cmpxchg() is fully ordered (SeqCst), and READ_ONCE() and plain assignments
-// carry no LKMM ordering (Relaxed).
+// try_cmpxchg() and xchg() are fully ordered (SeqCst), and READ_ONCE() and plain
+// assignments carry no LKMM ordering (Relaxed).
 impl<T> AtomicLink<T> for AtomicPtr<T> {
     #[inline]
     fn load_acquire(&self) -> *mut T {
@@ -87,6 +114,37 @@ impl<T> AtomicLink<T> for AtomicPtr<T> {
             }
         }
     }
+
+    #[inline]
+    fn xchg(&self, new: *mut T) -> *mut T {
+        self.swap(new, Ordering::SeqCst)
+    }
+}
+
+/// The body of `llist_add_batch()` in `include/linux/llist.h`, generic over
+/// the atomic.
+///
+/// `new_last_next` is the `next` link of the last entry of the batch. Returns
+/// whether the list was empty before adding.
+pub(crate) fn add_batch<T>(
+    head: &impl AtomicLink<T>,
+    new_first: *mut T,
+    new_last_next: &impl AtomicLink<T>,
+) -> bool {
+    let mut first = head.read_once();
+
+    loop {
+        new_last_next.write(first);
+        if head.try_cmpxchg(&mut first, new_first) {
+            return first.is_null();
+        }
+    }
+}
+
+/// The body of `llist_del_all()` in `include/linux/llist.h`, generic over the
+/// atomic.
+pub(crate) fn del_all<T>(head: &impl AtomicLink<T>) -> *mut T {
+    head.xchg(ptr::null_mut())
 }
 
 /// The body of [`llist_del_first()`], generic over the atomic.
@@ -209,4 +267,230 @@ pub unsafe extern "C" fn llist_reverse_order(head: *mut llist_node) -> *mut llis
     }
 
     new_head
+}
+
+/// An object that embeds an `llist_node`.
+///
+/// # Safety
+///
+/// `OFFSET` is the offset of an `llist_node` field of `Self`, found with
+/// `core::mem::offset_of!`, and only the lists the object is added to use
+/// that field.
+pub unsafe trait HasLlistNode {
+    /// The offset of the embedded `llist_node`.
+    const OFFSET: usize;
+}
+
+/// An owning pointer to a [`HasLlistNode`] object, which a list can hold.
+///
+/// # Safety
+///
+/// [`into_raw()`](Self::into_raw) gives up the only owner of the object, which
+/// stays valid, and whose `llist_node` nothing but a list uses, until
+/// [`from_raw()`](Self::from_raw) takes it back.
+pub unsafe trait ListItem: Sized {
+    /// The object the pointer owns.
+    type Target: HasLlistNode;
+
+    /// Gives up ownership of the object.
+    fn into_raw(self) -> NonNull<Self::Target>;
+
+    /// Takes back an object that [`into_raw()`](Self::into_raw) gave up.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` comes from `into_raw()`, and is taken back only once.
+    unsafe fn from_raw(ptr: NonNull<Self::Target>) -> Self;
+}
+
+/// The `llist_node` embedded in `obj`.
+fn node_of<T: HasLlistNode>(obj: NonNull<T>) -> *mut llist_node {
+    obj.as_ptr().wrapping_byte_add(T::OFFSET).cast()
+}
+
+/// The object that embeds `node`: `llist_entry()`.
+fn entry_of<T: HasLlistNode>(node: NonNull<llist_node>) -> Option<NonNull<T>> {
+    NonNull::new(node.as_ptr().wrapping_byte_sub(T::OFFSET).cast())
+}
+
+/// A lock-less list of `P`s, over an `llist_head`.
+///
+/// Any number of threads may [`add()`](Self::add) and
+/// [`del_all()`](Self::del_all) at once. `llist_del_first()` needs a single
+/// deleter, so it is only available through the [`Consumer`] that
+/// [`split()`](Self::split) returns, while the list is borrowed exclusively.
+#[repr(transparent)]
+pub struct LList<P: ListItem> {
+    head: llist_head,
+    _items: PhantomData<P>,
+}
+
+// SAFETY: (U6) the list hands Ps from the threads that add them to the threads
+// that delete them, so it may move between threads when P: Send.
+unsafe impl<P: ListItem + Send> Send for LList<P> {}
+
+// SAFETY: (U6) &LList allows add() and del_all() from many threads at once,
+// which the lock-less cmpxchg and xchg on head.first make safe, and which only
+// move Ps between threads.
+unsafe impl<P: ListItem + Send> Sync for LList<P> {}
+
+impl<P: ListItem> LList<P> {
+    /// `LLIST_HEAD_INIT()`: an empty list.
+    pub const fn new() -> Self {
+        Self {
+            head: llist_head {
+                first: AtomicPtr::new(ptr::null_mut()),
+            },
+            _items: PhantomData,
+        }
+    }
+
+    /// `llist_add()`: adds an item, lock-less, from any context.
+    ///
+    /// Returns true if the list was empty prior to adding this entry.
+    pub fn add(&self, item: P) -> bool {
+        let node = node_of(item.into_raw());
+        // SAFETY: (U3) into_raw() gave up the only owner of the object, so its
+        // llist_node is valid and only this list uses it until it is deleted.
+        let links = unsafe { &(*node).next };
+
+        add_batch(&self.head.first, node, links)
+    }
+
+    /// `llist_del_all()`: deletes all items, lock-less, from any context.
+    ///
+    /// The items come out from the newest to the oldest added one.
+    pub fn del_all(&self) -> Drain<P> {
+        Drain {
+            next: del_all(&self.head.first),
+            _items: PhantomData,
+        }
+    }
+
+    /// `llist_empty()`: whether the list is empty.
+    ///
+    /// Not guaranteed to be accurate or up to date.
+    pub fn is_empty(&self) -> bool {
+        self.head.first.read_once().is_null()
+    }
+
+    /// Splits the list into producers and its one consumer, for as long as they
+    /// borrow it.
+    pub fn split(&mut self) -> (Producer<'_, P>, Consumer<'_, P>) {
+        let list = &*self;
+
+        (Producer { list }, Consumer { list })
+    }
+}
+
+impl<P: ListItem> Default for LList<P> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<P: ListItem> Drop for LList<P> {
+    fn drop(&mut self) {
+        drop(self.del_all());
+    }
+}
+
+/// Adds items to a list whose [`Consumer`] exists.
+pub struct Producer<'a, P: ListItem> {
+    list: &'a LList<P>,
+}
+
+impl<P: ListItem> Clone for Producer<'_, P> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<P: ListItem> Copy for Producer<'_, P> {}
+
+impl<P: ListItem> Producer<'_, P> {
+    /// `llist_add()`: adds an item, lock-less, from any context.
+    ///
+    /// Returns true if the list was empty prior to adding this entry.
+    pub fn add(&self, item: P) -> bool {
+        self.list.add(item)
+    }
+}
+
+/// The only deleter of a list, for as long as it exists.
+pub struct Consumer<'a, P: ListItem> {
+    list: &'a LList<P>,
+}
+
+impl<P: ListItem> Consumer<'_, P> {
+    /// `llist_del_first()`: deletes the newest item.
+    pub fn del_first(&mut self) -> Option<P> {
+        let node = del_first(&self.list.head.first, |entry: *mut llist_node| {
+            // SAFETY: (U3) entry is on the list, so its object stays valid, and
+            // this consumer is the list's only deleter, so nobody deletes it
+            // while its next link is read.
+            unsafe { (*entry).next.read_once() }
+        });
+        let obj = entry_of(NonNull::new(node)?)?;
+
+        // SAFETY: (U3) the object was added through add(), from into_raw(), and
+        // deleting it from the list hands it back once.
+        Some(unsafe { P::from_raw(obj) })
+    }
+
+    /// `llist_del_all()`: deletes all items, newest first.
+    pub fn del_all(&mut self) -> Drain<P> {
+        self.list.del_all()
+    }
+}
+
+/// Items deleted from a list, as a chain that the `Drain` owns.
+///
+/// Iterating gives the items back, from the newest to the oldest added one;
+/// dropping the `Drain` drops the rest.
+pub struct Drain<P: ListItem> {
+    next: *mut llist_node,
+    _items: PhantomData<P>,
+}
+
+// SAFETY: (U6) the chain is detached from its list and owned by the Drain, so
+// moving it moves only the Ps.
+unsafe impl<P: ListItem + Send> Send for Drain<P> {}
+
+impl<P: ListItem> Drain<P> {
+    /// `llist_reverse_order()`: the same items, from the oldest to the newest.
+    pub fn reversed(self) -> Self {
+        let this = ManuallyDrop::new(self);
+
+        Self {
+            // SAFETY: (U3) the chain was deleted from its list and this Drain
+            // owns it, as llist_reverse_order() requires.
+            next: unsafe { llist_reverse_order(this.next) },
+            _items: PhantomData,
+        }
+    }
+}
+
+impl<P: ListItem> Iterator for Drain<P> {
+    type Item = P;
+
+    fn next(&mut self) -> Option<P> {
+        let node = NonNull::new(self.next)?;
+
+        // SAFETY: (U3) node is on the deleted chain, which this Drain owns.
+        self.next = unsafe { node.as_ref() }.next.read_once();
+        let obj = entry_of(node)?;
+
+        // SAFETY: (U3) the object was added through add(), from into_raw(), and
+        // leaving the chain hands it back once.
+        Some(unsafe { P::from_raw(obj) })
+    }
+}
+
+impl<P: ListItem> Drop for Drain<P> {
+    fn drop(&mut self) {
+        for item in self.by_ref() {
+            drop(item);
+        }
+    }
 }
