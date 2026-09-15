@@ -12,6 +12,7 @@ always-$(CONFIG_RUST) += exports_core_generated.h
 obj-$(CONFIG_RUST) += zerocopy.o
 
 obj-$(CONFIG_RUST) += kr.o
+obj-$(CONFIG_RUST_KERNEL) += main.o
 
 ifdef CONFIG_RUST_INLINE_HELPERS
 always-$(CONFIG_RUST) += helpers/helpers.bc helpers/helpers_module.bc
@@ -778,6 +779,13 @@ $(obj)/ffi.o: $(src)/ffi.rs $(obj)/compiler_builtins.o FORCE
 
 $(obj)/kr.o: private skip_gendwarfksyms = 1
 $(obj)/kr.o: $(src)/kr/lib.rs $(obj)/compiler_builtins.o FORCE
+	+$(call if_changed_rule,rustc_library)
+
+# The crate of ported core units, rooted at main.rs in the tree root. Each
+# unit exports its symbols from its own <unit>_ffi.c, with the license of the
+# C file, so this crate gets no exports_*_generated.h.
+$(obj)/main.o: private rustc_target_flags = --extern kr
+$(obj)/main.o: $(srctree)/main.rs $(obj)/kr.o FORCE
 	+$(call if_changed_rule,rustc_library)
 
 $(obj)/bindings.o: private rustc_target_flags = --extern ffi --extern pin_init
