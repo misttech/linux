@@ -145,7 +145,7 @@ Rules:
 
 ## `unsafe` taxonomy
 
-Every `unsafe` block is tagged `// SAFETY(Un): <invariant, naming the C
+Every `unsafe` block is tagged `// SAFETY: (Un) <invariant, naming the C
 contract>`. An `unsafe` that fits no class is rejected, not argued for.
 
 | Tag | Class | Justified by |

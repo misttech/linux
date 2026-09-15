@@ -38,7 +38,7 @@ output.
      and **every** field, matching `pahole` for each config in the record.
    - Hand-written asserts and `<=` size checks fail.
 5. **`unsafe`**
-   - Every block carries `SAFETY(Un)`, and the tag is correct.
+   - Every block carries `SAFETY: (Un)`, and the tag is correct.
    - The justification names the actual C contract.
    - The counts match the recorded budget.
    - Code that uses the abstraction has 0 `unsafe`.
