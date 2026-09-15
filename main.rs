@@ -16,5 +16,8 @@ pub mod ctype;
 #[path = "lib/kref.rs"]
 pub mod kref;
 
+#[path = "lib/llist.rs"]
+pub mod llist;
+
 #[path = "lib/refcount.rs"]
 pub mod refcount;
