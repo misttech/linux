@@ -19,5 +19,8 @@ pub mod kref;
 #[path = "lib/llist.rs"]
 pub mod llist;
 
+#[path = "lib/rcuref.rs"]
+pub mod rcuref;
+
 #[path = "lib/refcount.rs"]
 pub mod refcount;
