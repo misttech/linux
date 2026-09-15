@@ -10,6 +10,9 @@
 #[path = "lib/cmdline.rs"]
 pub mod cmdline;
 
+#[path = "lib/ctype.rs"]
+pub mod ctype;
+
 #[path = "lib/kref.rs"]
 pub mod kref;
 
