@@ -195,15 +195,15 @@ Rules:
 - **Calls into `c_*` functions are `unsafe` class U1.** The harness
   provides userspace stubs for them.
 
-## One-time wiring (not done yet)
+## One-time wiring
 
-This needs linux-rust's `scripts/make.sh LLVM=1 rustavailable` to pass.
+Done. It needs linux-rust's `scripts/make.sh LLVM=1 rustavailable` to pass.
 
-1. Add `config RUST_KERNEL` to `init/Kconfig`, after `config RUST`.
-2. Add `rust/kr/` and the `main.rs` crate as objects in `rust/Makefile`, the
-   way `ffi.o` is added, passing `@include/generated/rustc_cfg`. Build the
-   `main.rs` crate only under `CONFIG_RUST_KERNEL`.
-3. Register both crates in `scripts/generate_rust_analyzer.py`.
+1. `config RUST_KERNEL` is in `init/Kconfig`, after `config RUST`.
+2. `rust/Makefile` builds `rust/kr/` and the `main.rs` crate as objects, the
+   way it builds `ffi.o`, with `@include/generated/rustc_cfg` in the flags.
+   The `main.rs` crate is built only under `CONFIG_RUST_KERNEL`.
+3. Both crates are registered in `scripts/generate_rust_analyzer.py`.
 
 ## Workflow
 
