@@ -61,6 +61,7 @@ obj-y += bcd.o sort.o parser.o debug_locks.o random32.o \
 	 generic-radix-tree.o bitmap-str.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += refcount.o
 obj-$(CONFIG_RUST_KERNEL) += refcount_ffi.o
+obj-$(CONFIG_RUST_KERNEL) += kref_ffi.o
 obj-y += string_helpers.o
 obj-y += hexdump.o
 obj-$(CONFIG_TEST_HEXDUMP) += test_hexdump.o

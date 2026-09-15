@@ -7,5 +7,8 @@
 
 #![no_std]
 
+#[path = "lib/kref.rs"]
+pub mod kref;
+
 #[path = "lib/refcount.rs"]
 pub mod refcount;
