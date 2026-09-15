@@ -61,8 +61,8 @@ A C unit: `<dir>/<unit>.c`, its header, and its exported symbols.
 
 ## Rules
 
-- Depend only on `core`, `kr` and the unit's own `extern "C"`
-  declarations. Never on `kernel` or `bindings`.
+- Depend only on `core`, `kr`, other ports in the `main.rs` crate and the
+  unit's own `extern "C"` declarations. Never on `kernel` or `bindings`.
 - Do not change the header. Moving a `static inline` out of line requires
   `benchmark-vs-c` first.
 - `rcu_dereference`-style loads use `Ordering::Acquire`. Record which LKMM
