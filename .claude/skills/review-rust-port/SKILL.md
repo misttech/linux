@@ -31,8 +31,9 @@ output.
    - `Module.symvers` is identical between the `=n` and `=y` builds,
      including export type.
    - `git diff include/` is empty.
-3. **Dependencies.** The unit uses only `core`, `kr` and its own
-   `extern "C"`. No `kernel::` or `bindings::`.
+3. **Dependencies.** The unit uses only `core`, `kr`, other ports
+   (`crate::<unit>`) and its own `extern "C"`. No `kernel::` or
+   `bindings::`.
 4. **Layout**
    - Every mirror has a `kr::static_assert_layout!` with exact size, align
      and **every** field, matching `pahole` for each config in the record.

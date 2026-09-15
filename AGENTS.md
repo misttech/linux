@@ -132,10 +132,10 @@ obj-$(CONFIG_RUST_KERNEL) += refcount_ffi.o
 This option is unrelated to `CONFIG_RUST_KERNEL_DOCTESTS`.
 
 Rules:
-- **Dependencies.** A replacement depends only on `core`, `kr`, and its own
-  `extern "C"` declarations. It never depends on the `kernel` or `bindings`
-  crates. Those are bindings over the C being replaced, and the port must
-  also build in the harness.
+- **Dependencies.** A replacement depends only on `core`, `kr`, other ports
+  in the `main.rs` crate, and its own `extern "C"` declarations. It never
+  depends on the `kernel` or `bindings` crates. Those are bindings over the
+  C being replaced, and the port must also build in the harness.
 - **Exports.** Every exported symbol keeps its C name, signature and export
   license.
 - **Header inlines.** `static inline` functions in the header stay in C.
