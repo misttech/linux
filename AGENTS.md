@@ -197,8 +197,7 @@ Rules:
 
 ## One-time wiring (not done yet)
 
-This needs linux-rust's `scripts/make.sh LLVM=1 rustavailable` to pass;
-`bindgen` is missing on the current host.
+This needs linux-rust's `scripts/make.sh LLVM=1 rustavailable` to pass.
 
 1. Add `config RUST_KERNEL` to `init/Kconfig`, after `config RUST`.
 2. Add `rust/kr/` and the `main.rs` crate as objects in `rust/Makefile`, the
