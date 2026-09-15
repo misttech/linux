@@ -33,7 +33,7 @@ KASAN_SANITIZE_string.o := n
 CFLAGS_string.o += -fno-stack-protector
 endif
 
-lib-y := ctype.o string.o vsprintf.o \
+lib-y := string.o vsprintf.o \
 	 rbtree.o radix-tree.o timerqueue.o xarray.o \
 	 maple_tree.o idr.o extable.o irq_regs.o argv_split.o \
 	 flex_proportions.o ratelimit.o \
@@ -43,6 +43,8 @@ lib-y := ctype.o string.o vsprintf.o \
 	 buildid.o objpool.o iomem_copy.o sys_info.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += cmdline.o
 obj-$(CONFIG_RUST_KERNEL) += cmdline_ffi.o
+lib-$(if $(CONFIG_RUST_KERNEL),,y) += ctype.o
+obj-$(CONFIG_RUST_KERNEL) += ctype_ffi.o
 
 lib-$(CONFIG_UNION_FIND) += union_find.o
 lib-$(CONFIG_PRINTK) += dump_stack.o
