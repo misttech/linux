@@ -141,7 +141,8 @@ Rules:
 - **Header inlines.** `static inline` functions in the header stay in C.
   Moving one out of line into Rust changes codegen for every caller, so it
   needs `benchmark-vs-c` first. Header-only units such as `kref` start as a
-  typed Rust API in `<dir>/<unit>.rs`.
+  typed Rust API in `lib/<unit>.rs`, with any `<unit>_ffi.c` next to it,
+  because `include/` has no build rules.
 
 ## `unsafe` taxonomy
 
