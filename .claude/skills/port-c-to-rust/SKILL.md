@@ -46,7 +46,7 @@ A C unit: `<dir>/<unit>.c`, its header, and its exported symbols.
    - In the directory's Makefile, build `<unit>.o` only when the gate is off
      (`obj-$(if $(CONFIG_RUST_KERNEL),,y)`), and `<unit>_ffi.o` only when it
      is on (`obj-$(CONFIG_RUST_KERNEL)`).
-   - In `main.rs`, add `#[path = "<dir>/<unit>.rs"] mod <unit>;`.
+   - In `main.rs`, add `#[path = "<dir>/<unit>.rs"] pub mod <unit>;`.
 7. **Classify each `unsafe`** as U1–U7. If one fits no class, redesign.
 8. **Differential test.** Add the unit to the linux-rust harness (see
    `test-rust-port` there).
