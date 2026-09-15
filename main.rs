@@ -7,6 +7,9 @@
 
 #![no_std]
 
+#[path = "lib/cmdline.rs"]
+pub mod cmdline;
+
 #[path = "lib/kref.rs"]
 pub mod kref;
 
