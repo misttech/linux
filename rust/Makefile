@@ -11,6 +11,8 @@ always-$(CONFIG_RUST) += exports_core_generated.h
 
 obj-$(CONFIG_RUST) += zerocopy.o
 
+obj-$(CONFIG_RUST) += kr.o
+
 ifdef CONFIG_RUST_INLINE_HELPERS
 always-$(CONFIG_RUST) += helpers/helpers.bc helpers/helpers_module.bc
 else
@@ -772,6 +774,10 @@ $(obj)/build_error.o: $(src)/build_error.rs $(obj)/compiler_builtins.o FORCE
 
 $(obj)/ffi.o: private skip_gendwarfksyms = 1
 $(obj)/ffi.o: $(src)/ffi.rs $(obj)/compiler_builtins.o FORCE
+	+$(call if_changed_rule,rustc_library)
+
+$(obj)/kr.o: private skip_gendwarfksyms = 1
+$(obj)/kr.o: $(src)/kr/lib.rs $(obj)/compiler_builtins.o FORCE
 	+$(call if_changed_rule,rustc_library)
 
 $(obj)/bindings.o: private rustc_target_flags = --extern ffi --extern pin_init
