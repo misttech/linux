@@ -24,6 +24,21 @@ pub struct atomic_t {
 
 kr::static_assert_layout!(atomic_t, size = 4, align = 4, counter @ 0);
 
+impl atomic_t {
+    /// `ATOMIC_INIT(i)`.
+    pub const fn new(i: i32) -> Self {
+        Self {
+            counter: AtomicI32::new(i),
+        }
+    }
+
+    /// The counter, on which [`RefsAtomic`] implements the `<linux/atomic.h>`
+    /// operations that this unit and the other ports use.
+    pub(crate) fn counter(&self) -> &AtomicI32 {
+        &self.counter
+    }
+}
+
 /// Mirror of `refcount_t`, which is `struct refcount_struct` in
 /// `include/linux/refcount_types.h`.
 #[allow(non_camel_case_types)]
@@ -159,9 +174,7 @@ impl refcount_t {
     /// `REFCOUNT_INIT(n)`.
     pub const fn new(n: i32) -> Self {
         Self {
-            refs: atomic_t {
-                counter: AtomicI32::new(n),
-            },
+            refs: atomic_t::new(n),
         }
     }
 
