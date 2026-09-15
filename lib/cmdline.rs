@@ -9,6 +9,7 @@
 //!
 //! Code and copyrights come from init/main.c and arch/i386/kernel/setup.c.
 
+use crate::ctype::isspace;
 use core::ffi::{c_int, c_long, c_uint, c_ulonglong};
 use core::ptr;
 use core::slice;
@@ -23,8 +24,6 @@ extern "C" {
     fn simple_strtol(cp: *const c_char, endp: *mut *mut c_char, base: c_uint) -> c_long;
     fn skip_spaces(str: *const c_char) -> *mut c_char;
     fn strlen(s: *const c_char) -> usize;
-
-    fn c_cmdline_isspace(c: c_char) -> bool;
 }
 
 /// The bytes of the NUL-terminated string at `str`, without the NUL.
@@ -355,9 +354,7 @@ pub unsafe extern "C" fn next_arg(
         if c == 0 {
             break;
         }
-        // SAFETY: (U1) c_cmdline_isspace() is isspace(), a lookup in the
-        // _ctype table.
-        if unsafe { c_cmdline_isspace(c) } && !in_quote {
+        if isspace(c) && !in_quote {
             break;
         }
         if equals == 0 && c == b'=' {
