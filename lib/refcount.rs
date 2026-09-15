@@ -7,8 +7,12 @@
 //! its static inlines stay in C. `lib/refcount_ffi.c` exports these symbols
 //! with the license of `lib/refcount.c`, and wraps the C macros and inlines
 //! called from here.
+//!
+//! Rust callers use the typed API on [`refcount_t`], which implements the
+//! operations of the header's inlines in Rust.
 
 use core::ffi::{c_uint, c_ulong, c_void};
+use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
 /// Mirror of `atomic_t` (`include/linux/types.h`).
@@ -87,17 +91,56 @@ pub(crate) trait RefsAtomic {
     /// `atomic_read()`.
     fn read(&self) -> i32;
 
+    /// `atomic_set()`.
+    fn set(&self, i: i32);
+
+    /// `atomic_fetch_add_relaxed()`.
+    fn fetch_add_relaxed(&self, i: i32) -> i32;
+
+    /// `atomic_fetch_sub_release()`.
+    fn fetch_sub_release(&self, i: i32) -> i32;
+
+    /// `atomic_try_cmpxchg_relaxed()`: on failure, `old` gets the current value.
+    fn try_cmpxchg_relaxed(&self, old: &mut i32, new: i32) -> bool;
+
     /// `atomic_try_cmpxchg_release()`: on failure, `old` gets the current value.
     fn try_cmpxchg_release(&self, old: &mut i32, new: i32) -> bool;
 }
 
-// The orderings follow the kernel's: atomic_read() carries no LKMM annotation
-// and is fully ordered (SeqCst), and a _release store is Release. The load of
-// a failed compare-exchange stays Relaxed, as Release gives it.
+// The orderings follow the kernel's: atomic_read() and atomic_set() carry no
+// LKMM annotation and are fully ordered (SeqCst), _relaxed is Relaxed, and a
+// _release store is Release. The load of a failed compare-exchange stays
+// Relaxed, as Release gives it.
 impl RefsAtomic for AtomicI32 {
     #[inline]
     fn read(&self) -> i32 {
         self.load(Ordering::SeqCst)
+    }
+
+    #[inline]
+    fn set(&self, i: i32) {
+        self.store(i, Ordering::SeqCst);
+    }
+
+    #[inline]
+    fn fetch_add_relaxed(&self, i: i32) -> i32 {
+        self.fetch_add(i, Ordering::Relaxed)
+    }
+
+    #[inline]
+    fn fetch_sub_release(&self, i: i32) -> i32 {
+        self.fetch_sub(i, Ordering::Release)
+    }
+
+    #[inline]
+    fn try_cmpxchg_relaxed(&self, old: &mut i32, new: i32) -> bool {
+        match self.compare_exchange(*old, new, Ordering::Relaxed, Ordering::Relaxed) {
+            Ok(_) => true,
+            Err(current) => {
+                *old = current;
+                false
+            }
+        }
     }
 
     #[inline]
@@ -110,6 +153,157 @@ impl RefsAtomic for AtomicI32 {
             }
         }
     }
+}
+
+impl refcount_t {
+    /// `REFCOUNT_INIT(n)`.
+    pub const fn new(n: i32) -> Self {
+        Self {
+            refs: atomic_t {
+                counter: AtomicI32::new(n),
+            },
+        }
+    }
+
+    /// `refcount_set()`: sets the refcount's value.
+    #[inline]
+    pub fn set(&self, n: i32) {
+        self.refs.counter.set(n);
+    }
+
+    /// `refcount_read()`: returns the refcount's value.
+    #[inline]
+    pub fn read(&self) -> u32 {
+        self.refs.counter.read() as u32
+    }
+
+    /// `refcount_inc()`: increments the refcount.
+    ///
+    /// Similar to `atomic_inc()`, but will saturate at `REFCOUNT_SATURATED` and
+    /// WARN.
+    ///
+    /// Provides no memory ordering, it is assumed the caller already has a
+    /// reference on the object.
+    ///
+    /// Will WARN if the refcount is 0, as this represents a possible
+    /// use-after-free condition.
+    #[inline]
+    pub fn inc(&self) {
+        add(&self.refs.counter, 1, |t| self.warn_saturate(t));
+    }
+
+    /// `refcount_inc_not_zero()`: increments the refcount unless it is 0.
+    ///
+    /// Similar to `atomic_inc_not_zero()`, but will saturate at
+    /// `REFCOUNT_SATURATED` and WARN.
+    ///
+    /// Provides no memory ordering, it is assumed the caller has guaranteed the
+    /// object memory to be stable (RCU, etc.). It does provide a control
+    /// dependency and thereby orders future stores. See the comment on top of
+    /// `include/linux/refcount.h`.
+    ///
+    /// Returns true if the increment was successful, false otherwise.
+    #[inline]
+    #[must_use]
+    pub fn inc_not_zero(&self) -> bool {
+        add_not_zero(&self.refs.counter, 1, |t| self.warn_saturate(t)) != 0
+    }
+
+    /// `refcount_dec_and_test()`: decrements the refcount and tests if it is 0.
+    ///
+    /// Similar to `atomic_dec_and_test()`, it will WARN on underflow and fail to
+    /// decrement when saturated at `REFCOUNT_SATURATED`.
+    ///
+    /// Provides release memory ordering, such that prior loads and stores are
+    /// done before, and provides an acquire ordering on success such that
+    /// free() must come after.
+    ///
+    /// Returns true if the resulting refcount is 0, false otherwise.
+    #[inline]
+    #[must_use]
+    pub fn dec_and_test(&self) -> bool {
+        sub_and_test(&self.refs.counter, 1, |t| self.warn_saturate(t)).0
+    }
+
+    #[cold]
+    fn warn_saturate(&self, t: refcount_saturation_type) {
+        // SAFETY: (U3) the pointer comes from &self, so it points to a live
+        // refcount_t.
+        unsafe { refcount_warn_saturate(ptr::from_ref(self).cast_mut(), t) }
+    }
+}
+
+/// The body of `__refcount_add()` in `include/linux/refcount.h`, generic over
+/// the atomic.
+///
+/// Returns the old value. `warn` is `refcount_warn_saturate()`.
+pub(crate) fn add(
+    refs: &impl RefsAtomic,
+    i: i32,
+    warn: impl FnOnce(refcount_saturation_type),
+) -> i32 {
+    let old = refs.fetch_add_relaxed(i);
+
+    if old == 0 {
+        warn(REFCOUNT_ADD_UAF);
+    } else if old < 0 || old.wrapping_add(i) < 0 {
+        warn(REFCOUNT_ADD_OVF);
+    }
+
+    old
+}
+
+/// The body of `__refcount_add_not_zero()` in `include/linux/refcount.h`,
+/// generic over the atomic.
+///
+/// Returns the old value, which is 0 when nothing was added. `warn` is
+/// `refcount_warn_saturate()`.
+pub(crate) fn add_not_zero(
+    refs: &impl RefsAtomic,
+    i: i32,
+    warn: impl FnOnce(refcount_saturation_type),
+) -> i32 {
+    let mut old = refs.read();
+
+    loop {
+        if old == 0 {
+            break;
+        }
+        let new = old.wrapping_add(i);
+        if refs.try_cmpxchg_relaxed(&mut old, new) {
+            break;
+        }
+    }
+
+    if old < 0 || old.wrapping_add(i) < 0 {
+        warn(REFCOUNT_ADD_NOT_ZERO_OVF);
+    }
+
+    old
+}
+
+/// The body of `__refcount_sub_and_test()` in `include/linux/refcount.h`,
+/// generic over the atomic.
+///
+/// Returns whether the count reached 0, and the old value. `warn` is
+/// `refcount_warn_saturate()`.
+pub(crate) fn sub_and_test(
+    refs: &impl RefsAtomic,
+    i: i32,
+    warn: impl FnOnce(refcount_saturation_type),
+) -> (bool, i32) {
+    let old = refs.fetch_sub_release(i);
+
+    if old > 0 && old == i {
+        // smp_acquire__after_ctrl_dep(): an LKMM annotation, with no code.
+        return (true, old);
+    }
+
+    if old <= 0 || old.wrapping_sub(i) < 0 {
+        warn(REFCOUNT_SUB_UAF);
+    }
+
+    (false, old)
 }
 
 /// `refcount_warn_saturate()`: saturates `r` and warns about event `t`.
