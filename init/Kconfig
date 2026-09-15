@@ -2275,6 +2275,16 @@ config RUST
 
 	  If unsure, say N.
 
+config RUST_KERNEL
+	bool "Rust implementation of ported core kernel units"
+	depends on RUST
+	help
+	  Builds the Rust replacements of ported core kernel units instead
+	  of their C implementations. All ported units switch together;
+	  the C implementations stay for comparison and rollback.
+
+	  If unsure, say N.
+
 source "rust/kernel/Kconfig.test"
 
 config RUSTC_VERSION_TEXT
