@@ -6,3 +6,6 @@
 //! replaces and is added here as one `#[path]` module.
 
 #![no_std]
+
+#[path = "lib/refcount.rs"]
+pub mod refcount;
