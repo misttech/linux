@@ -13,6 +13,9 @@ pub mod cmdline;
 #[path = "lib/ctype.rs"]
 pub mod ctype;
 
+#[path = "lib/dec_and_lock.rs"]
+pub mod dec_and_lock;
+
 #[path = "lib/kref.rs"]
 pub mod kref;
 

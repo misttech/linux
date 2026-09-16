@@ -38,13 +38,15 @@ lib-y := string.o vsprintf.o \
 	 maple_tree.o idr.o extable.o irq_regs.o argv_split.o \
 	 flex_proportions.o ratelimit.o \
 	 is_single_threaded.o plist.o decompress.o kobject_uevent.o \
-	 earlycpio.o seq_buf.o siphash.o dec_and_lock.o \
+	 earlycpio.o seq_buf.o siphash.o \
 	 nmi_backtrace.o win_minmax.o memcat_p.o \
 	 buildid.o objpool.o iomem_copy.o sys_info.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += cmdline.o
 obj-$(CONFIG_RUST_KERNEL) += cmdline_ffi.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += ctype.o
 obj-$(CONFIG_RUST_KERNEL) += ctype_ffi.o
+lib-$(if $(CONFIG_RUST_KERNEL),,y) += dec_and_lock.o
+obj-$(CONFIG_RUST_KERNEL) += dec_and_lock_ffi.o
 
 lib-$(CONFIG_UNION_FIND) += union_find.o
 lib-$(CONFIG_PRINTK) += dump_stack.o
