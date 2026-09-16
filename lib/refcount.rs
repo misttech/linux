@@ -89,6 +89,8 @@ extern "C" {
     fn c_refcount_warn_unknown();
     fn c_refcount_warn_dec_not_one_underflow();
 
+    fn c_refcount_acquire_after_ctrl_dep();
+
     fn c_refcount_dec_and_test(r: *mut refcount_t) -> bool;
     fn c_refcount_mutex_lock(lock: *mut mutex);
     fn c_refcount_mutex_unlock(lock: *mut mutex);
@@ -235,7 +237,17 @@ impl refcount_t {
     #[inline]
     #[must_use]
     pub fn dec_and_test(&self) -> bool {
-        sub_and_test(&self.refs.counter, 1, |t| self.warn_saturate(t)).0
+        sub_and_test(
+            &self.refs.counter,
+            1,
+            || {
+                // SAFETY: (U1) c_refcount_acquire_after_ctrl_dep() takes no
+                // arguments and only issues smp_acquire__after_ctrl_dep().
+                unsafe { c_refcount_acquire_after_ctrl_dep() }
+            },
+            |t| self.warn_saturate(t),
+        )
+        .0
     }
 
     #[cold]
@@ -298,17 +310,19 @@ pub(crate) fn add_not_zero(
 /// The body of `__refcount_sub_and_test()` in `include/linux/refcount.h`,
 /// generic over the atomic.
 ///
-/// Returns whether the count reached 0, and the old value. `warn` is
+/// Returns whether the count reached 0, and the old value.
+/// `acquire_after_ctrl_dep` is `smp_acquire__after_ctrl_dep()`, and `warn` is
 /// `refcount_warn_saturate()`.
 pub(crate) fn sub_and_test(
     refs: &impl RefsAtomic,
     i: i32,
+    acquire_after_ctrl_dep: impl FnOnce(),
     warn: impl FnOnce(refcount_saturation_type),
 ) -> (bool, i32) {
     let old = refs.fetch_sub_release(i);
 
     if old > 0 && old == i {
-        // smp_acquire__after_ctrl_dep(): an LKMM annotation, with no code.
+        acquire_after_ctrl_dep();
         return (true, old);
     }
 
