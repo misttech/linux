@@ -164,9 +164,10 @@ pub unsafe extern "C" fn get_option(str: *mut *mut c_char, pint: *mut c_int) -> 
 /// Returns the character in the string which caused the parse to end
 /// (typically a null terminator, if `str` is completely parseable).
 ///
-/// Where the C code would compute an index outside of `ints` (a range that
-/// makes the count wrap around), this implementation stops the parse
-/// instead of writing out of bounds.
+/// Deliberate exception: a range that wraps the signed count, such as
+/// `"0-2147483647,1"`, makes C compute `ints[INT_MIN]` and write out of
+/// bounds. This implementation stops the parse instead. The differential
+/// harness does not generate that input, because the C side would crash.
 ///
 /// # Safety
 ///
