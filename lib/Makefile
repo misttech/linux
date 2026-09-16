@@ -39,7 +39,7 @@ lib-y := string.o vsprintf.o \
 	 flex_proportions.o ratelimit.o \
 	 is_single_threaded.o plist.o decompress.o kobject_uevent.o \
 	 earlycpio.o seq_buf.o siphash.o \
-	 nmi_backtrace.o win_minmax.o memcat_p.o \
+	 nmi_backtrace.o memcat_p.o \
 	 buildid.o objpool.o iomem_copy.o sys_info.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += cmdline.o
 obj-$(CONFIG_RUST_KERNEL) += cmdline_ffi.o
@@ -49,6 +49,8 @@ lib-$(if $(CONFIG_RUST_KERNEL),,y) += dec_and_lock.o
 obj-$(CONFIG_RUST_KERNEL) += dec_and_lock_ffi.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += timerqueue.o
 obj-$(CONFIG_RUST_KERNEL) += timerqueue_ffi.o
+lib-$(if $(CONFIG_RUST_KERNEL),,y) += win_minmax.o
+obj-$(CONFIG_RUST_KERNEL) += win_minmax_ffi.o
 
 lib-$(CONFIG_UNION_FIND) += union_find.o
 lib-$(CONFIG_PRINTK) += dump_stack.o
