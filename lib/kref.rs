@@ -227,19 +227,21 @@ impl<T: KrefCounted> KRef<T> {
         this.kref().read()
     }
 
-    /// Puts the reference and, if it was the last, runs `unlink` and
-    /// [`KrefCounted::release()`] with `lock` held, then unlocks.
+    /// `kref_put_mutex()`: puts the reference and, if it was the last, removes
+    /// the object with `unlink` under `lock` before releasing it.
     ///
-    /// This is the Rust form of `kref_put_mutex()`. In C, `release` runs with
-    /// the mutex held and unlocks it. Here `unlink` is the locked list
-    /// removal, [`KrefCounted::release()`] is the free (the same function
-    /// `Drop` uses, so it must not unlock), and this method unlocks. A lookup
-    /// that takes references with [`get_unless_zero()`](Self::get_unless_zero)
-    /// under the same mutex therefore never finds a released object.
+    /// In C, `release` runs with the mutex held and unlocks it. Here `unlink`
+    /// runs with the mutex held, the mutex is unlocked, and then the object is
+    /// released. `unlink` is the hook for the work C's `release` did under the
+    /// lock; the free does not need the lock, and leaving it until after the
+    /// unlock is what keeps this sound. [`KrefCounted::release()`] is also
+    /// what `Drop` calls, with no lock held, so it cannot unlock the way C's
+    /// `release` does — and unlocking after it returns would touch a mutex
+    /// embedded in `T` after the object was freed.
     ///
-    /// `lock` must outlive `T`. An embedded mutex would be gone after
-    /// `release` and the unlock would be a use-after-free; C avoids that by
-    /// unlocking inside `release` before it frees.
+    /// A lookup that takes references with
+    /// [`get_unless_zero()`](Self::get_unless_zero) under the same mutex
+    /// therefore never finds a released object.
     ///
     /// Returns true if this call released the object.
     pub fn put_mutex(this: Self, lock: MutexRef<'_>, unlink: impl FnOnce(&T)) -> bool {
@@ -256,23 +258,21 @@ impl<T: KrefCounted> KRef<T> {
         }
 
         unlink(obj);
-        // SAFETY: (U4) the count reached zero, the mutex is still held, and
-        // obj is not used after release. Matches C: release runs with the
-        // mutex held.
-        unsafe { T::release(obj_ptr) };
         // SAFETY: (U1) mutex_unlock(): refcount_dec_and_mutex_lock() returned
-        // true, holding lock. T::release must not have unlocked.
+        // true, holding lock.
         unsafe { c_kref_mutex_unlock(lock.ptr.as_ptr()) };
+        // SAFETY: (U4) the count reached zero, and obj is not used again.
+        unsafe { T::release(obj_ptr) };
         true
     }
 
-    /// Puts the reference and, if it was the last, runs `unlink` and
-    /// [`KrefCounted::release()`] with `lock` held, then unlocks.
+    /// `kref_put_lock()`: puts the reference and, if it was the last, removes
+    /// the object with `unlink` under `lock` before releasing it.
     ///
-    /// This is the Rust form of `kref_put_lock()`. Same split as
-    /// [`put_mutex()`](Self::put_mutex): C's `release` runs with the spinlock
-    /// held and unlocks it; here `unlink` and [`KrefCounted::release()`] run
-    /// with the lock held, and this method unlocks. `lock` must outlive `T`.
+    /// Same split as [`put_mutex()`](Self::put_mutex): C's `release` runs with
+    /// the spinlock held and unlocks it; here `unlink` runs with it held, the
+    /// spinlock is unlocked, and then the object is released. Freeing outside
+    /// the spinlock is also what the kernel prefers.
     ///
     /// Returns true if this call released the object.
     pub fn put_lock(this: Self, lock: SpinLockRef<'_>, unlink: impl FnOnce(&T)) -> bool {
@@ -289,13 +289,11 @@ impl<T: KrefCounted> KRef<T> {
         }
 
         unlink(obj);
-        // SAFETY: (U4) the count reached zero, the spinlock is still held, and
-        // obj is not used after release. Matches C: release runs with the
-        // spinlock held.
-        unsafe { T::release(obj_ptr) };
         // SAFETY: (U1) spin_unlock(): refcount_dec_and_lock() returned true,
-        // holding lock. T::release must not have unlocked.
+        // holding lock.
         unsafe { c_kref_spin_unlock(lock.ptr.as_ptr()) };
+        // SAFETY: (U4) the count reached zero, and obj is not used again.
+        unsafe { T::release(obj_ptr) };
         true
     }
 }
