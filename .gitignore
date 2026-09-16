@@ -123,6 +123,14 @@ modules.order
 !.rustfmt.toml
 
 #
+# Claude Code: version control project sub-agents, but ignore local settings
+#
+!.claude/
+!.claude/agents/
+!.claude/agents/**
+.claude/settings.local.json
+
+#
 # Generated include files
 #
 /include/config/
