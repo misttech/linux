@@ -111,7 +111,7 @@ Paths are relative to this tree, except those marked *(linux-rust)*.
 **Why one crate.** In `scripts/Makefile.build`, the `%.o: %.c` rule comes
 before `%.o: %.rs`. A `<unit>.rs` next to `<unit>.c` therefore cannot build
 as its own `<unit>.o`. All ports compile into one crate rooted at `main.rs`,
-the way Zircon roots its kernel Rust at `zircon/kernel/main.rs`.
+following the single-crate pattern for in-place replacements.
 
 **Gate: `CONFIG_RUST_KERNEL`.** A single option switches every ported unit
 together. Do not add per-unit options. It is defined in `init/Kconfig`,
@@ -164,10 +164,10 @@ contract>`. An `unsafe` that fits no class is rejected, not argued for.
 
 ## Common kernel lib: `kr`
 
-`rust/kr/` is the zero-dependency core crate (only `core`), modeled on
-Zircon's `zr`. Replacements and the harness share it, so every unit
-compiles in both places without changes. Nothing may be added to `kr` that
-depends on `kernel`, `bindings` or another in-tree crate.
+`rust/kr/` is the zero-dependency core crate (only `core`). Replacements
+and the harness share it, so every unit compiles in both places without
+changes. Nothing may be added to `kr` that depends on `kernel`, `bindings`
+or another in-tree crate.
 
 | Use | For |
 |-----|-----|
@@ -180,8 +180,8 @@ Size is asserted as equal, never `<=`, because the mirror *is* the C type.
 
 ## FFI: `<unit>_ffi.c`
 
-Create one only when needed, next to the unit, the way Zircon uses
-`*_ffi.cc`. It holds two kinds of declarative content and nothing else:
+Create one only when needed, next to the unit. It holds two kinds of
+declarative content and nothing else:
 
 | Content | Why | Form |
 |---------|-----|------|
@@ -296,21 +296,6 @@ Project decision: commits in this tree use kernel style.
 - Body wrapped at 72 columns, explaining the reason and intention.
 - `Assisted-by:` trailer, never `Signed-off-by` (see above).
 - linux-rust uses its own scheme; see its `AGENTS.md`.
-
-## References
-
-Fuchsia checkout: `/home/bherrera/Projects/misttech/fuchsia-mist`
-
-- `zircon/kernel/main.rs`: a single crate root, with `#[path]` modules that
-  sit beside the C++ they replace.
-- `zircon/kernel/platform/timer_ffi.cc`: the shape of an `_ffi` file.
-- `zircon/skills/cpp-to-rust-rubric/SKILL.md`: layout parity, FFI, comment
-  parity and pitfalls.
-- `zircon/skills/cpp-to-rust/SKILL.md`: the coder/reviewer orchestration loop
-  and the git verification gate.
-- `zircon/skills/fbl-intrusive-porting/SKILL.md`: intrusive containers and
-  refcounting.
-- `src/lib/zr/`: the model for `kr`.
 
 ## Updating this file
 
