@@ -53,8 +53,9 @@ pub struct llist_head {
     first: AtomicPtr<llist_node>,
 }
 
-// BTF of x86_64 kernels: one pointer each. 32-bit values are the pointer size,
-// not yet checked against a 32-bit kernel's BTF.
+// BTF of x86_64 kernels: one pointer each. 32-bit values are from pahole of
+// gcc -m32 DWARF of the same structs (include/linux/llist.h): size 4, align 4,
+// the pointer at offset 0.
 #[cfg(target_pointer_width = "64")]
 kr::static_assert_layout!(llist_node, size = 8, align = 8, next @ 0);
 #[cfg(target_pointer_width = "64")]
