@@ -25,5 +25,8 @@ pub mod llist;
 #[path = "lib/rcuref.rs"]
 pub mod rcuref;
 
+#[path = "lib/timerqueue.rs"]
+pub mod timerqueue;
+
 #[path = "lib/refcount.rs"]
 pub mod refcount;
