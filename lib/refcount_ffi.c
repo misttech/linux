@@ -5,6 +5,7 @@
  * Rust code calls.
  */
 
+#include <linux/atomic.h>
 #include <linux/bug.h>
 #include <linux/export.h>
 #include <linux/mutex.h>
@@ -104,4 +105,15 @@ void c_refcount_spin_unlock_irqrestore(spinlock_t *lock, unsigned long *flags);
 void c_refcount_spin_unlock_irqrestore(spinlock_t *lock, unsigned long *flags)
 {
 	spin_unlock_irqrestore(lock, *flags);
+}
+
+/*
+ * smp_acquire__after_ctrl_dep() is a barrier, not an LKMM annotation: an
+ * instruction on arm64 (dmb ishld) and a compiler barrier on x86. Rust
+ * orderings cannot express it, so the port calls it here.
+ */
+void c_refcount_acquire_after_ctrl_dep(void);
+void c_refcount_acquire_after_ctrl_dep(void)
+{
+	smp_acquire__after_ctrl_dep();
 }
