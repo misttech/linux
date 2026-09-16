@@ -2641,6 +2641,21 @@ config FIND_BIT_BENCHMARK
 
 	  If unsure, say N.
 
+config TIMERQUEUE_BENCHMARK
+	bool "Benchmark timerqueue"
+	help
+	  This builds micro-benchmarks for the timerqueue library, which run
+	  at late_initcall when the kernel is booted with
+	  timerqueue_benchmark.run=1. They print one line per batch of
+	  operations.
+
+	  They exist to compare the C implementation with the Rust one
+	  (CONFIG_RUST_KERNEL) on the code the kernel actually runs. ftrace
+	  cannot: lib/ is built without the ftrace hooks and Rust gets no
+	  fentry flag, so no symbol here can be traced.
+
+	  If unsure, say N.
+
 config REGION_ALLOC_BENCHMARK
 	tristate "Benchmark bitmap, IDA and Maple Tree region allocation"
 	help
