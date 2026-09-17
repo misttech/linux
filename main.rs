@@ -22,6 +22,9 @@ pub mod errseq;
 #[path = "lib/kref.rs"]
 pub mod kref;
 
+#[path = "lib/kfifo.rs"]
+pub mod kfifo;
+
 #[path = "lib/llist.rs"]
 pub mod llist;
 

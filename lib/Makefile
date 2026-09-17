@@ -51,6 +51,8 @@ lib-$(if $(CONFIG_RUST_KERNEL),,y) += timerqueue.o
 obj-$(CONFIG_RUST_KERNEL) += timerqueue_ffi.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += list_sort.o
 obj-$(CONFIG_RUST_KERNEL) += list_sort_ffi.o
+obj-$(if $(CONFIG_RUST_KERNEL),,y) += kfifo.o
+obj-$(CONFIG_RUST_KERNEL) += kfifo_ffi.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += win_minmax.o
 obj-$(CONFIG_RUST_KERNEL) += win_minmax_ffi.o
 
@@ -67,7 +69,7 @@ CONTEXT_ANALYSIS_rhashtable.o := y
 obj-y += bcd.o sort.o parser.o debug_locks.o random32.o \
 	 bust_spinlocks.o kasprintf.o bitmap.o scatterlist.o \
 	 uuid.o iov_iter.o clz_ctz.o \
-	 bsearch.o find_bit.o lwq.o memweight.o kfifo.o \
+	 bsearch.o find_bit.o lwq.o memweight.o \
 	 percpu-refcount.o rhashtable.o base64.o \
 	 once.o usercopy.o bucket_locks.o \
 	 generic-radix-tree.o bitmap-str.o
