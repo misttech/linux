@@ -32,6 +32,7 @@
 //! and wraps the `WARN()` on an out-of-range error.
 
 use core::ffi::c_int;
+use core::ptr;
 use core::sync::atomic::{AtomicU32, Ordering};
 
 /// Mirror of `errseq_t` (`include/linux/errseq.h`): a typedef of `u32`.
@@ -293,17 +294,41 @@ pub unsafe extern "C" fn errseq_check(eseq: *mut errseq_t, since: errseq_t) -> c
 /// # Safety
 ///
 /// `eseq` and `since` point to live `errseq_t` values for the duration of the
-/// call. The caller serializes updates of `since`.
+/// call. The caller serializes concurrent updates of `since`. The C header
+/// does not require the two pointers to be distinct. Distinct pointers become
+/// `&AtomicU32` and `&mut`; the aliased case uses only raw access, so the two
+/// references are never formed to the same word.
 #[no_mangle]
 pub unsafe extern "C" fn errseq_check_and_advance(
     eseq: *mut errseq_t,
     since: *mut errseq_t,
 ) -> c_int {
-    // SAFETY: (U3) the C contract of errseq_check_and_advance(): eseq is the
-    // caller's errseq_t, live for this call.
-    let eseq = unsafe { AtomicU32::from_ptr(eseq) };
-    // SAFETY: (U3) since is the caller's cursor, live for this call, and the
-    // caller serializes updates of it.
-    let since = unsafe { &mut *since };
-    check_and_advance(eseq, since)
+    if !ptr::eq(eseq, since) {
+        // SAFETY: (U3) the pointers are distinct and both live, so the
+        // &AtomicU32 and &mut errseq_t do not overlap.
+        let eseq = unsafe { AtomicU32::from_ptr(eseq) };
+        // SAFETY: (U3) since is live and distinct from eseq.
+        let since = unsafe { &mut *since };
+        return check_and_advance(eseq, since);
+    }
+
+    let old = {
+        // SAFETY: (U3) eseq is live. The &AtomicU32 does not outlive this
+        // block, so it cannot overlap the later write through since.
+        unsafe { AtomicU32::from_ptr(eseq) }.read_once()
+    };
+    // SAFETY: (U3) since aliases eseq and is live.
+    let since_val = unsafe { ptr::read(since) };
+    if old == since_val {
+        return 0;
+    }
+    let new = old | ERRSEQ_SEEN;
+    if new != old {
+        // SAFETY: (U3) as the load above. Dropped before the write through
+        // since.
+        let _ = unsafe { AtomicU32::from_ptr(eseq) }.cmpxchg(old, new);
+    }
+    // SAFETY: (U3) since aliases eseq. No &AtomicU32 is held.
+    unsafe { ptr::write(since, new) };
+    -((new & ERRNO_MASK) as c_int)
 }
