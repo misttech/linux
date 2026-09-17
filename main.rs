@@ -22,6 +22,9 @@ pub mod kref;
 #[path = "lib/llist.rs"]
 pub mod llist;
 
+#[path = "lib/list_sort.rs"]
+pub mod list_sort;
+
 #[path = "lib/rcuref.rs"]
 pub mod rcuref;
 
