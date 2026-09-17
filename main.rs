@@ -16,6 +16,9 @@ pub mod ctype;
 #[path = "lib/dec_and_lock.rs"]
 pub mod dec_and_lock;
 
+#[path = "lib/errseq.rs"]
+pub mod errseq;
+
 #[path = "lib/kref.rs"]
 pub mod kref;
 
