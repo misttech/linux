@@ -101,7 +101,7 @@ Paths are relative to this tree, except those marked *(linux-rust)*.
 | File | Role |
 |------|------|
 | `<dir>/<unit>.c` | Existing C. Built only when `CONFIG_RUST_KERNEL=n` |
-| `<dir>/<unit>.rs` | The Rust implementation. Exports the C symbols as `#[no_mangle] pub extern "C"` with exact C names and signatures. May also offer a typed Rust API (e.g. `KRef<T>`) |
+| `<dir>/<unit>.rs` | The Rust implementation. Exports the C symbols as `#[unsafe(no_mangle)] pub extern "C"` with exact C names and signatures. May also offer a typed Rust API (e.g. `KRef<T>`) |
 | `<dir>/<unit>_ffi.c` | Only when needed; see [FFI](#ffi-unit_ffic) |
 | `include/linux/<unit>.h` | The ABI contract. Unchanged |
 | `main.rs` (tree root) | Crate root, built only when `CONFIG_RUST_KERNEL=y`. One `#[path = "<dir>/<unit>.rs"] pub mod <unit>;` per port |
@@ -133,7 +133,7 @@ This option is unrelated to `CONFIG_RUST_KERNEL_DOCTESTS`.
 
 Rules:
 - **Dependencies.** A replacement depends only on `core`, `kr`, other ports
-  in the `main.rs` crate, and its own `extern "C"` declarations. It never
+  in the `main.rs` crate, and its own `unsafe extern "C"` declarations. It never
   depends on the `kernel` or `bindings` crates. Those are bindings over the
   C being replaced, and the port must also build in the harness.
 - **Exports.** Every exported symbol keeps its C name, signature and export
@@ -186,7 +186,7 @@ declarative content and nothing else:
 | Content | Why | Form |
 |---------|-----|------|
 | Export lines for symbols implemented in Rust | `rust/exports.c` exports every Rust symbol as GPL-only, but the port must keep the original license | `EXPORT_SYMBOL(refcount_dec_if_one);`, copied from `<unit>.c` |
-| Wrappers for C inlines and macros the Rust code calls (`WARN_ONCE`, `mutex_lock`, ...) | Rust cannot call these directly, and it must not use `bindings` | `c_<unit>_<fn>`. The prototype sits above the definition in the same file (`-Wmissing-prototypes`), and `<unit>.rs` declares it in `extern "C"` |
+| Wrappers for C inlines and macros the Rust code calls (`WARN_ONCE`, `mutex_lock`, ...) | Rust cannot call these directly, and it must not use `bindings` | `c_<unit>_<fn>`. The prototype sits above the definition in the same file (`-Wmissing-prototypes`), and `<unit>.rs` declares it in `unsafe extern "C"` |
 
 Rules:
 - **No logic.** A wrapper is a single forwarding call.

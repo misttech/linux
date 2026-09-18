@@ -78,7 +78,7 @@ pub const REFCOUNT_DEC_LEAK: refcount_saturation_type = 4;
 /// `REFCOUNT_SATURATED`.
 pub const REFCOUNT_SATURATED: i32 = i32::MIN / 2;
 
-extern "C" {
+unsafe extern "C" {
     // One wrapper per WARN_ONCE() site in lib/refcount.c, so that each keeps
     // its own once flag.
     fn c_refcount_warn_add_not_zero_ovf();
@@ -339,7 +339,7 @@ pub(crate) fn sub_and_test(
 ///
 /// `r` points to a `refcount_t` that the calling operation in
 /// `include/linux/refcount.h` has just read or written.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn refcount_warn_saturate(r: *mut refcount_t, t: refcount_saturation_type) {
     // SAFETY: (U3) every caller in include/linux/refcount.h has just accessed
     // *r through the same pointer, so it points to a refcount_t.
@@ -379,7 +379,7 @@ pub unsafe extern "C" fn refcount_warn_saturate(r: *mut refcount_t, t: refcount_
 /// # Safety
 ///
 /// `r` points to a `refcount_t` on which the caller holds a reference.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn refcount_dec_if_one(r: *mut refcount_t) -> bool {
     // SAFETY: (U4) the caller holds a reference, so r points to a live
     // refcount_t.
@@ -407,7 +407,7 @@ pub(crate) fn dec_if_one(refs: &impl RefsAtomic) -> bool {
 /// # Safety
 ///
 /// `r` points to a `refcount_t` on which the caller holds a reference.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn refcount_dec_not_one(r: *mut refcount_t) -> bool {
     // SAFETY: (U4) the caller holds a reference, so r points to a live
     // refcount_t.
@@ -466,7 +466,7 @@ pub(crate) fn dec_not_one(refs: &impl RefsAtomic, warn_underflow: impl FnOnce())
 ///
 /// `r` points to a `refcount_t` on which the caller holds a reference, and
 /// `lock` to an initialized mutex the caller may sleep on.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn refcount_dec_and_mutex_lock(r: *mut refcount_t, lock: *mut mutex) -> bool {
     // SAFETY: (U4) the caller holds a reference on r, which is
     // refcount_dec_not_one()'s contract.
@@ -505,7 +505,7 @@ pub unsafe extern "C" fn refcount_dec_and_mutex_lock(r: *mut refcount_t, lock: *
 ///
 /// `r` points to a `refcount_t` on which the caller holds a reference, and
 /// `lock` to an initialized spinlock.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn refcount_dec_and_lock(r: *mut refcount_t, lock: *mut spinlock_t) -> bool {
     // SAFETY: (U4) the caller holds a reference on r, which is
     // refcount_dec_not_one()'s contract.
@@ -539,7 +539,7 @@ pub unsafe extern "C" fn refcount_dec_and_lock(r: *mut refcount_t, lock: *mut sp
 ///
 /// `r` points to a `refcount_t` on which the caller holds a reference, `lock`
 /// to an initialized spinlock, and `flags` to the caller's saved IRQ flags.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn refcount_dec_and_lock_irqsave(
     r: *mut refcount_t,
     lock: *mut spinlock_t,

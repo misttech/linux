@@ -179,7 +179,7 @@ unsafe fn merge_final(
 ///
 /// (U3) `head` is a live circular list head and `cmp` is a valid comparison,
 /// which the header requires with `nonnull(2,3)`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn list_sort(
     priv_: *mut core::ffi::c_void,
     head: *mut list_head,

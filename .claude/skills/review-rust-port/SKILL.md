@@ -26,13 +26,13 @@ output.
      `CONFIG_RUST_KERNEL`. Any per-unit option fails.
    - The Makefile builds exactly one of `<unit>.o` or `<unit>_ffi.o`.
 2. **ABI**
-   - Every C exported symbol exists in Rust as `#[no_mangle] extern "C"`,
+   - Every C exported symbol exists in Rust as `#[unsafe(no_mangle)] extern "C"`,
      with an identical signature.
    - `Module.symvers` is identical between the `=n` and `=y` builds,
      including export type.
    - `git diff include/` is empty.
 3. **Dependencies.** The unit uses only `core`, `kr`, other ports
-   (`crate::<unit>`) and its own `extern "C"`. No `kernel::` or
+   (`crate::<unit>`) and its own `unsafe extern "C"`. No `kernel::` or
    `bindings::`.
 4. **Layout**
    - Every mirror has a `kr::static_assert_layout!` with exact size, align

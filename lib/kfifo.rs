@@ -76,7 +76,7 @@ kr::static_assert_layout!(__kfifo, size = 24, align = 8,
 kr::static_assert_layout!(__kfifo, size = 20, align = 4,
     r#in @ 0, out @ 4, mask @ 8, esize @ 12, data @ 16);
 
-extern "C" {
+unsafe extern "C" {
     /// `kmalloc_array_node()`, a macro over `alloc_hooks`.
     fn c_kfifo_kmalloc_array_node(n: usize, size: usize, gfp: gfp_t, node: c_int) -> *mut c_void;
     /// `kfree()` is a real exported function, so it needs no wrapper.
@@ -251,7 +251,7 @@ unsafe fn kfifo_copy_out(fifo: &__kfifo, dst: *mut u8, len: u32, off: u32) {
 /// # Safety
 ///
 /// (U3) `fifo` points to a live `__kfifo`, per the C contract.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_alloc_node(
     fifo: *mut __kfifo,
     size: c_uint,
@@ -295,7 +295,7 @@ pub unsafe extern "C" fn __kfifo_alloc_node(
 ///
 /// (U3) `fifo` points to a live `__kfifo` whose `data` came from
 /// `__kfifo_alloc_node()`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_free(fifo: *mut __kfifo) {
     // SAFETY: (U3) the caller's fifo.
     let fifo = unsafe { &mut *fifo };
@@ -312,7 +312,7 @@ pub unsafe extern "C" fn __kfifo_free(fifo: *mut __kfifo) {
 /// # Safety
 ///
 /// (U3) `fifo` points to a live `__kfifo`, and `buffer` covers `size` bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_init(
     fifo: *mut __kfifo,
     buffer: *mut c_void,
@@ -350,7 +350,7 @@ pub unsafe extern "C" fn __kfifo_init(
 /// # Safety
 ///
 /// (U3) `fifo` is live and `buf` covers `len` elements.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_in(fifo: *mut __kfifo, buf: *const c_void, len: c_uint) -> c_uint {
     // SAFETY: (U3) the caller's fifo.
     let fifo = unsafe { &*fifo };
@@ -367,7 +367,7 @@ pub unsafe extern "C" fn __kfifo_in(fifo: *mut __kfifo, buf: *const c_void, len:
 /// # Safety
 ///
 /// (U3) `fifo` is live and `buf` covers `len` elements.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_out_peek(
     fifo: *mut __kfifo,
     buf: *mut c_void,
@@ -387,7 +387,7 @@ pub unsafe extern "C" fn __kfifo_out_peek(
 /// # Safety
 ///
 /// (U3) `fifo` is live; `tail` is null or points to a writable `c_uint`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_out_linear(
     fifo: *mut __kfifo,
     tail: *mut c_uint,
@@ -410,7 +410,7 @@ pub unsafe extern "C" fn __kfifo_out_linear(
 /// # Safety
 ///
 /// (U3) `fifo` is live and `buf` covers `len` elements.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_out(fifo: *mut __kfifo, buf: *mut c_void, len: c_uint) -> c_uint {
     // SAFETY: (U3) the caller's fifo and buffer.
     let len = unsafe { __kfifo_out_peek(fifo, buf, len) };
@@ -496,7 +496,7 @@ unsafe fn kfifo_copy_from_user(
 /// # Safety
 ///
 /// (U3) `fifo` is live, `from` is a user pointer, `copied` is writable.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_from_user(
     fifo: *mut __kfifo,
     from: *const c_void,
@@ -592,7 +592,7 @@ unsafe fn kfifo_copy_to_user(
 /// # Safety
 ///
 /// (U3) `fifo` is live, `to` is a user pointer, `copied` is writable.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_to_user(
     fifo: *mut __kfifo,
     to: *mut c_void,
@@ -699,7 +699,7 @@ unsafe fn setup_sgl(
 /// # Safety
 ///
 /// (U3) `fifo` is live and `sgl` has room for `nents` entries.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_dma_in_prepare(
     fifo: *mut __kfifo,
     sgl: *mut c_void,
@@ -720,7 +720,7 @@ pub unsafe extern "C" fn __kfifo_dma_in_prepare(
 /// # Safety
 ///
 /// (U3) As `__kfifo_dma_in_prepare`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_dma_out_prepare(
     fifo: *mut __kfifo,
     sgl: *mut c_void,
@@ -743,7 +743,7 @@ pub unsafe extern "C" fn __kfifo_dma_out_prepare(
 /// C writes `(1 << (recsize << 3)) - 1`. `recsize` is `sizeof(*rectype)` and
 /// is 0, 1 or 2 in every caller; the shift is done in 64 bits here so that a
 /// larger value cannot shift out of range.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn __kfifo_max_r(len: c_uint, recsize: usize) -> c_uint {
     let max = (1u64
         .wrapping_shl((recsize as u32).wrapping_mul(8))
@@ -810,7 +810,7 @@ unsafe fn kfifo_poke_n(fifo: &__kfifo, n: c_uint, recsize: usize) {
 /// # Safety
 ///
 /// (U3) `fifo` is live.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_len_r(fifo: *mut __kfifo, recsize: usize) -> c_uint {
     // SAFETY: (U3) the caller's fifo.
     unsafe { kfifo_peek_n(&*fifo, recsize) }
@@ -819,7 +819,7 @@ pub unsafe extern "C" fn __kfifo_len_r(fifo: *mut __kfifo, recsize: usize) -> c_
 /// # Safety
 ///
 /// (U3) `fifo` is live and `buf` covers `len` bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_in_r(
     fifo: *mut __kfifo,
     buf: *const c_void,
@@ -881,7 +881,7 @@ unsafe fn kfifo_out_copy_r(
 /// # Safety
 ///
 /// (U3) `fifo` is live and `buf` covers `len` bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_out_peek_r(
     fifo: *mut __kfifo,
     buf: *mut c_void,
@@ -903,7 +903,7 @@ pub unsafe extern "C" fn __kfifo_out_peek_r(
 /// # Safety
 ///
 /// (U3) `fifo` is live; `tail` is null or writable.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_out_linear_r(
     fifo: *mut __kfifo,
     tail: *mut c_uint,
@@ -929,7 +929,7 @@ pub unsafe extern "C" fn __kfifo_out_linear_r(
 /// # Safety
 ///
 /// (U3) `fifo` is live and `buf` covers `len` bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_out_r(
     fifo: *mut __kfifo,
     buf: *mut c_void,
@@ -953,7 +953,7 @@ pub unsafe extern "C" fn __kfifo_out_r(
 /// # Safety
 ///
 /// (U3) `fifo` is live.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_skip_r(fifo: *mut __kfifo, recsize: usize) {
     // SAFETY: (U3) the caller's fifo.
     let fifo = unsafe { &*fifo };
@@ -966,7 +966,7 @@ pub unsafe extern "C" fn __kfifo_skip_r(fifo: *mut __kfifo, recsize: usize) {
 /// # Safety
 ///
 /// (U3) `fifo` is live, `from` is a user pointer, `copied` is writable.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_from_user_r(
     fifo: *mut __kfifo,
     from: *const c_void,
@@ -1010,7 +1010,7 @@ pub unsafe extern "C" fn __kfifo_from_user_r(
 /// # Safety
 ///
 /// (U3) `fifo` is live, `to` is a user pointer, `copied` is writable.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_to_user_r(
     fifo: *mut __kfifo,
     to: *mut c_void,
@@ -1057,7 +1057,7 @@ pub unsafe extern "C" fn __kfifo_to_user_r(
 /// # Safety
 ///
 /// (U3) `fifo` is live and `sgl` has room for `nents` entries.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_dma_in_prepare_r(
     fifo: *mut __kfifo,
     sgl: *mut c_void,
@@ -1093,7 +1093,7 @@ pub unsafe extern "C" fn __kfifo_dma_in_prepare_r(
 /// # Safety
 ///
 /// (U3) `fifo` is live.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_dma_in_finish_r(fifo: *mut __kfifo, len: c_uint, recsize: usize) {
     // SAFETY: (U3) the caller's fifo.
     let fifo = unsafe { &*fifo };
@@ -1107,7 +1107,7 @@ pub unsafe extern "C" fn __kfifo_dma_in_finish_r(fifo: *mut __kfifo, len: c_uint
 /// # Safety
 ///
 /// (U3) `fifo` is live and `sgl` has room for `nents` entries.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn __kfifo_dma_out_prepare_r(
     fifo: *mut __kfifo,
     sgl: *mut c_void,

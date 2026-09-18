@@ -31,7 +31,7 @@ use core::sync::atomic::{AtomicI32, Ordering};
 #[allow(non_camel_case_types)]
 pub type raw_spinlock_t = c_void;
 
-extern "C" {
+unsafe extern "C" {
     fn c_dec_and_lock_spin_lock(lock: *mut spinlock_t);
     fn c_dec_and_lock_spin_unlock(lock: *mut spinlock_t);
     fn c_dec_and_lock_spin_lock_irqsave(lock: *mut spinlock_t, flags: *mut c_ulong);
@@ -131,7 +131,7 @@ pub(crate) fn dec_and_test(v: &impl DecAtomic) -> bool {
 ///
 /// `atomic` points to a live `atomic_t` on which the caller holds a
 /// reference, and `lock` to an initialized spinlock.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn atomic_dec_and_lock(
     atomic: *mut atomic_t,
     lock: *mut spinlock_t,
@@ -164,7 +164,7 @@ pub unsafe extern "C" fn atomic_dec_and_lock(
 /// `atomic` points to a live `atomic_t` on which the caller holds a
 /// reference, `lock` to an initialized spinlock, and `flags` to the caller's
 /// saved IRQ flags.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn _atomic_dec_and_lock_irqsave(
     atomic: *mut atomic_t,
     lock: *mut spinlock_t,
@@ -199,7 +199,7 @@ pub unsafe extern "C" fn _atomic_dec_and_lock_irqsave(
 ///
 /// `atomic` points to a live `atomic_t` on which the caller holds a
 /// reference, and `lock` to an initialized raw spinlock.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn atomic_dec_and_raw_lock(
     atomic: *mut atomic_t,
     lock: *mut raw_spinlock_t,
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn atomic_dec_and_raw_lock(
 /// `atomic` points to a live `atomic_t` on which the caller holds a
 /// reference, `lock` to an initialized raw spinlock, and `flags` to the
 /// caller's saved IRQ flags.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn _atomic_dec_and_raw_lock_irqsave(
     atomic: *mut atomic_t,
     lock: *mut raw_spinlock_t,

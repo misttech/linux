@@ -203,7 +203,7 @@ pub(crate) fn del_first_this<T>(
 ///
 /// `head` points to a live `llist_head` whose entries are live, and the caller
 /// is its only deleter for the duration of the call, as above.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn llist_del_first(head: *mut llist_head) -> *mut llist_node {
     // SAFETY: (U3) head points to a live llist_head, per the C contract.
     let head = unsafe { &*head };
@@ -228,7 +228,7 @@ pub unsafe extern "C" fn llist_del_first(head: *mut llist_head) -> *mut llist_no
 ///
 /// `head` points to a live `llist_head` whose entries are live, and no other
 /// caller offers the same `this` concurrently.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn llist_del_first_this(
     head: *mut llist_head,
     this: *mut llist_node,
@@ -252,7 +252,7 @@ pub unsafe extern "C" fn llist_del_first_this(
 ///
 /// `head` is NULL or the first entry of a chain that was deleted from its list,
 /// which the caller owns.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn llist_reverse_order(head: *mut llist_node) -> *mut llist_node {
     let mut head = head;
     let mut new_head = ptr::null_mut();

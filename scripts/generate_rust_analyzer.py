@@ -330,6 +330,7 @@ def generate_crates(
         srctree / "main.rs",
         [core, compiler_builtins, kr],
         cfg=generated_cfg,
+        edition="2024",
     )
 
     scripts = srctree / "scripts"

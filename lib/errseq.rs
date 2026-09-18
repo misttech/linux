@@ -64,7 +64,7 @@ kr::static_assert!(ERRSEQ_SEEN == 0x1000);
 kr::static_assert!(ERRNO_MASK == 0x0fff);
 kr::static_assert!(ERRSEQ_CTR_INC == 0x2000);
 
-extern "C" {
+unsafe extern "C" {
     fn c_errseq_warn_bad_err(err: c_int);
 }
 
@@ -221,7 +221,7 @@ pub(crate) fn check_and_advance<A: ErrseqAtomic>(eseq: &A, since: &mut errseq_t)
 /// # Safety
 ///
 /// `eseq` points to a live `errseq_t` for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn errseq_set(eseq: *mut errseq_t, err: c_int) -> errseq_t {
     // SAFETY: (U3) the C contract of errseq_set(): eseq is the caller's
     // errseq_t, live for this call. Atomic ops on a plain u32 match the
@@ -247,7 +247,7 @@ pub unsafe extern "C" fn errseq_set(eseq: *mut errseq_t, err: c_int) -> errseq_t
 /// # Safety
 ///
 /// As [`errseq_set()`].
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn errseq_sample(eseq: *mut errseq_t) -> errseq_t {
     // SAFETY: (U3) the C contract of errseq_sample(): eseq is the caller's
     // errseq_t, live for this call.
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn errseq_sample(eseq: *mut errseq_t) -> errseq_t {
 /// # Safety
 ///
 /// As [`errseq_set()`].
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn errseq_check(eseq: *mut errseq_t, since: errseq_t) -> c_int {
     // SAFETY: (U3) the C contract of errseq_check(): eseq is the caller's
     // errseq_t, live for this call.
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn errseq_check(eseq: *mut errseq_t, since: errseq_t) -> c
 /// does not require the two pointers to be distinct. Distinct pointers become
 /// `&AtomicU32` and `&mut`; the aliased case uses only raw access, so the two
 /// references are never formed to the same word.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn errseq_check_and_advance(
     eseq: *mut errseq_t,
     since: *mut errseq_t,

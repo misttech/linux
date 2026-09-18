@@ -132,7 +132,7 @@ kr::static_assert_layout!(timerqueue_linked_node, size = 48, align = 8,
 #[cfg(target_pointer_width = "64")]
 kr::static_assert_layout!(timerqueue_linked_head, size = 16, align = 8, rb_root @ 0);
 
-extern "C" {
+unsafe extern "C" {
     fn rb_insert_color(node: *mut rb_node, root: *mut rb_root);
     fn rb_erase(node: *mut rb_node, root: *mut rb_root);
     fn rb_next(node: *const rb_node) -> *mut rb_node;
@@ -200,7 +200,7 @@ fn node_2_tq_linked(node: *mut rb_node) -> *mut timerqueue_linked_node {
 ///
 /// `head` and `node` point to live objects, and the caller serializes this
 /// call against every other user of `head`, as the unit requires.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn timerqueue_add(
     head: *mut timerqueue_head,
     node: *mut timerqueue_node,
@@ -257,7 +257,7 @@ pub unsafe extern "C" fn timerqueue_add(
 /// # Safety
 ///
 /// As [`timerqueue_add()`].
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn timerqueue_del(
     head: *mut timerqueue_head,
     node: *mut timerqueue_node,
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn timerqueue_del(
 ///
 /// `node` is null or points to a live `timerqueue_node` in a tree the caller
 /// serializes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn timerqueue_iterate_next(
     node: *mut timerqueue_node,
 ) -> *mut timerqueue_node {
@@ -323,7 +323,7 @@ pub unsafe extern "C" fn timerqueue_iterate_next(
 /// # Safety
 ///
 /// As [`timerqueue_add()`].
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn timerqueue_linked_add(
     head: *mut timerqueue_linked_head,
     node: *mut timerqueue_linked_node,

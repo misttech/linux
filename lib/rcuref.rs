@@ -207,7 +207,7 @@ pub const RCUREF_DEAD: u32 = 0xE0000000;
 /// `RCUREF_NOREF`: the counter value after the last reference was dropped.
 pub const RCUREF_NOREF: u32 = 0xFFFFFFFF;
 
-extern "C" {
+unsafe extern "C" {
     // One wrapper per WARN_ONCE() site in lib/rcuref.c, so that each keeps its
     // own once flag.
     fn c_rcuref_warn_saturated();
@@ -426,7 +426,7 @@ pub(crate) fn put(
 ///
 /// `r` points to the `rcuref_t` that `rcuref_get()` in
 /// `include/linux/rcuref.h` has just incremented.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn rcuref_get_slowpath(r: *mut rcuref_t) -> bool {
     // SAFETY: (U3) rcuref_get() in include/linux/rcuref.h has just incremented
     // *r through the same pointer, so it points to a rcuref_t.
@@ -486,7 +486,7 @@ pub(crate) fn get_slowpath(refs: &impl RefsAtomic, warn_saturated: impl FnOnce()
 /// `r` points to the `rcuref_t` that `__rcuref_put()` in
 /// `include/linux/rcuref.h` has just decremented to `cnt`, in a context that
 /// prohibits a grace period, so the object is alive for this call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn rcuref_put_slowpath(r: *mut rcuref_t, cnt: c_uint) -> bool {
     // SAFETY: (U5) __rcuref_put() in include/linux/rcuref.h has just
     // decremented *r through the same pointer, and holds off the grace period

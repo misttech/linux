@@ -784,7 +784,8 @@ $(obj)/kr.o: $(src)/kr/lib.rs $(obj)/compiler_builtins.o FORCE
 # The crate of ported core units, rooted at main.rs in the tree root. Each
 # unit exports its symbols from its own <unit>_ffi.c, with the license of the
 # C file, so this crate gets no exports_*_generated.h.
-$(obj)/main.o: private rustc_target_flags = --extern kr
+$(obj)/main.o: private skip_flags = --edition=2021
+$(obj)/main.o: private rustc_target_flags = --edition=2024 --extern kr
 $(obj)/main.o: $(srctree)/main.rs $(obj)/kr.o FORCE
 	+$(call if_changed_rule,rustc_library)
 

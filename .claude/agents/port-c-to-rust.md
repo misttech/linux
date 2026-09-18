@@ -30,7 +30,7 @@ A C unit: `<dir>/<unit>.c`, its header, and its exported symbols.
 
 3. **Mirror the types** in `<dir>/<unit>.rs`: `#[repr(C)]`, followed by `kr::static_assert_layout!` listing every field. Fields that are unported or config-dependent use `kr::Opaque<T>` or `kr::OpaqueBytes<N>`.
 
-4. **Implement the exports** in `<dir>/<unit>.rs` as `#[no_mangle] pub extern "C" fn <c_name>`, with the exact C signature.
+4. **Implement the exports** in `<dir>/<unit>.rs` as `#[unsafe(no_mangle)] pub extern "C" fn <c_name>`, with the exact C signature.
    - Keep the semantics exactly: saturation, `WARN`, return values.
    - Keep the in-body comments from `<unit>.c`.
    - Never hand out `&mut T` from a shared object, and never assume uniqueness.
@@ -40,7 +40,7 @@ A C unit: `<dir>/<unit>.c`, its header, and its exported symbols.
    - the `EXPORT_SYMBOL*` lines copied from `<unit>.c`;
    - `c_<unit>_<fn>` wrappers for C inlines and macros the Rust code calls, each with its prototype above the definition.
    
-   Declare the wrappers in `<unit>.rs` in an `extern "C"` block. No logic.
+   Declare the wrappers in `<unit>.rs` in an `unsafe extern "C"` block. No logic.
 
 6. **Wire the gate.** `CONFIG_RUST_KERNEL` is the only switch. Do not add a per-unit option.
    - In the directory's Makefile, build `<unit>.o` only when the gate is off (`obj-$(if $(CONFIG_RUST_KERNEL),,y)`), and `<unit>_ffi.o` only when it is on (`obj-$(CONFIG_RUST_KERNEL)`).
@@ -59,7 +59,7 @@ A C unit: `<dir>/<unit>.c`, its header, and its exported symbols.
 
 ## Rules
 
-- Depend only on `core`, `kr`, other ports in the `main.rs` crate and the unit's own `extern "C"` declarations. Never on `kernel` or `bindings`.
+- Depend only on `core`, `kr`, other ports in the `main.rs` crate and the unit's own `unsafe extern "C"` declarations. Never on `kernel` or `bindings`.
 - Do not change the header. Moving a `static inline` out of line requires `benchmark-vs-c` first.
 - `rcu_dereference`-style loads use `Ordering::Acquire`. Record which LKMM ordering is lost.
 - Edit real files. Add an SPDX `GPL-2.0` header to new files.
