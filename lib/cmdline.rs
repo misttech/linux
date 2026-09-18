@@ -19,7 +19,7 @@ use core::slice;
 #[allow(non_camel_case_types)]
 type c_char = u8;
 
-extern "C" {
+unsafe extern "C" {
     fn simple_strtoull(cp: *const c_char, endp: *mut *mut c_char, base: c_uint) -> c_ulonglong;
     fn simple_strtol(cp: *const c_char, endp: *mut *mut c_char, base: c_uint) -> c_long;
     fn skip_spaces(str: *const c_char) -> *mut c_char;
@@ -138,7 +138,7 @@ unsafe fn parse_option(str: &mut *mut c_char, pint: Option<&mut c_int>) -> c_int
 ///
 /// `str` points to a string pointer that is NULL or points into a
 /// NUL-terminated string, and `pint` is NULL or points to a writable int.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn get_option(str: *mut *mut c_char, pint: *mut c_int) -> c_int {
     // SAFETY: (U3) the caller passes a valid pointer to its string pointer and
     // a NULL or writable pint, as the kernel-doc of get_option() requires.
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn get_option(str: *mut *mut c_char, pint: *mut c_int) -> 
 ///
 /// `str` is a NUL-terminated string, and `ints` has room for `nints`
 /// integers, and for at least one.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn get_options(
     str: *const c_char,
     nints: c_int,
@@ -235,7 +235,7 @@ pub unsafe extern "C" fn get_options(
 ///
 /// `ptr` is a NUL-terminated string, and `retptr` is NULL or points to a
 /// writable string pointer.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn memparse(ptr: *const c_char, retptr: *mut *mut c_char) -> c_ulonglong {
     // local pointer to end of parsed string
     let mut endptr: *mut c_char = ptr::null_mut();
@@ -286,7 +286,7 @@ pub unsafe extern "C" fn memparse(ptr: *const c_char, retptr: *mut *mut c_char) 
 /// # Safety
 ///
 /// `str` and `option` are NUL-terminated strings.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn parse_option_str(str: *const c_char, option: *const c_char) -> bool {
     // SAFETY: (U3) str and option are NUL-terminated strings, which are not
     // written during this call.
@@ -329,7 +329,7 @@ fn clear_closing_quote(buf: &mut [u8], end: usize) {
 ///
 /// `args` is a writable NUL-terminated string that nothing else accesses during
 /// the call, and `param` and `val` point to writable string pointers.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn next_arg(
     args: *mut c_char,
     param: *mut *mut c_char,

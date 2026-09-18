@@ -64,7 +64,7 @@ kr::static_assert!(CTYPE.len() == 256);
 /// `_ctype`: the character class of each `unsigned char`, which the
 /// `include/linux/ctype.h` macros read.
 #[allow(non_upper_case_globals)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static _ctype: [u8; 256] = CTYPE;
 
 /// `__ismask(c)`.

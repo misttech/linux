@@ -29,7 +29,7 @@ A C unit: `<dir>/<unit>.c`, its header, and its exported symbols.
    `kr::static_assert_layout!` listing every field. Fields that are unported
    or config-dependent use `kr::Opaque<T>` or `kr::OpaqueBytes<N>`.
 4. **Implement the exports** in `<dir>/<unit>.rs` as
-   `#[no_mangle] pub extern "C" fn <c_name>`, with the exact C signature.
+   `#[unsafe(no_mangle)] pub extern "C" fn <c_name>`, with the exact C signature.
    - Keep the semantics exactly: saturation, `WARN`, return values.
    - Keep the in-body comments from `<unit>.c`.
    - Never hand out `&mut T` from a shared object, and never assume
@@ -40,7 +40,7 @@ A C unit: `<dir>/<unit>.c`, its header, and its exported symbols.
    - `c_<unit>_<fn>` wrappers for C inlines and macros the Rust code calls,
      each with its prototype above the definition.
 
-   Declare the wrappers in `<unit>.rs` in an `extern "C"` block. No logic.
+   Declare the wrappers in `<unit>.rs` in an `unsafe extern "C"` block. No logic.
 6. **Wire the gate.** `CONFIG_RUST_KERNEL` is the only switch. Do not add a
    per-unit option.
    - In the directory's Makefile, build `<unit>.o` only when the gate is off
@@ -62,7 +62,7 @@ A C unit: `<dir>/<unit>.c`, its header, and its exported symbols.
 ## Rules
 
 - Depend only on `core`, `kr`, other ports in the `main.rs` crate and the
-  unit's own `extern "C"` declarations. Never on `kernel` or `bindings`.
+  unit's own `unsafe extern "C"` declarations. Never on `kernel` or `bindings`.
 - Do not change the header. Moving a `static inline` out of line requires
   `benchmark-vs-c` first.
 - `rcu_dereference`-style loads use `Ordering::Acquire`. Record which LKMM

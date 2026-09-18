@@ -105,7 +105,7 @@ fn minmax_subwin_update(m: &mut minmax, win: u32, val: &minmax_sample) -> u32 {
 ///
 /// `m` points to a live `struct minmax` for the duration of the call. The
 /// caller serializes updates of this tracker, as C callers do.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn minmax_running_max(m: *mut minmax, win: u32, t: u32, meas: u32) -> u32 {
     // SAFETY: (U3) the C contract of minmax_running_max(): m is the
     // caller's tracker, live for this call.
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn minmax_running_max(m: *mut minmax, win: u32, t: u32, me
 /// # Safety
 ///
 /// As [`minmax_running_max()`].
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn minmax_running_min(m: *mut minmax, win: u32, t: u32, meas: u32) -> u32 {
     // SAFETY: (U3) the C contract of minmax_running_min(): m is the
     // caller's tracker, live for this call.

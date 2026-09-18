@@ -62,7 +62,7 @@ impl Default for Kref {
     }
 }
 
-extern "C" {
+unsafe extern "C" {
     fn c_kref_mutex_unlock(lock: *mut mutex);
     fn c_kref_spin_unlock(lock: *mut spinlock_t);
 }
