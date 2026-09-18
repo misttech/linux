@@ -71,7 +71,7 @@ obj-y += bcd.o sort.o parser.o debug_locks.o random32.o \
 	 bust_spinlocks.o kasprintf.o bitmap.o scatterlist.o \
 	 uuid.o iov_iter.o clz_ctz.o \
 	 bsearch.o find_bit.o lwq.o memweight.o \
-	 percpu-refcount.o rhashtable.o base64.o \
+	 percpu-refcount.o rhashtable.o \
 	 once.o usercopy.o bucket_locks.o \
 	 generic-radix-tree.o bitmap-str.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += refcount.o
@@ -83,6 +83,8 @@ obj-$(if $(CONFIG_RUST_KERNEL),,y) += rcuref.o
 obj-$(CONFIG_RUST_KERNEL) += rcuref_ffi.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += errseq.o
 obj-$(CONFIG_RUST_KERNEL) += errseq_ffi.o
+obj-$(if $(CONFIG_RUST_KERNEL),,y) += base64.o
+obj-$(CONFIG_RUST_KERNEL) += base64_ffi.o
 
 obj-y += string_helpers.o
 obj-y += hexdump.o

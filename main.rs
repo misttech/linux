@@ -8,11 +8,17 @@
 #![no_std]
 
 mod port_layout {
-    include!(concat!(env!("OBJTREE"), "/include/generated/port-layout.rs"));
+    include!(concat!(
+        env!("OBJTREE"),
+        "/include/generated/port-layout.rs"
+    ));
 }
 
 #[path = "lib/cmdline.rs"]
 pub mod cmdline;
+
+#[path = "lib/base64.rs"]
+pub mod base64;
 
 #[path = "lib/ctype.rs"]
 pub mod ctype;
