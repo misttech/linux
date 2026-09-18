@@ -7,6 +7,10 @@
 
 #![no_std]
 
+mod port_layout {
+    include!(concat!(env!("OBJTREE"), "/include/generated/port-layout.rs"));
+}
+
 #[path = "lib/cmdline.rs"]
 pub mod cmdline;
 
@@ -24,6 +28,9 @@ pub mod kref;
 
 #[path = "lib/kfifo.rs"]
 pub mod kfifo;
+
+#[path = "lib/lockref.rs"]
+pub mod lockref;
 
 #[path = "lib/llist.rs"]
 pub mod llist;
