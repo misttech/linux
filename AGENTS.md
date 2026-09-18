@@ -171,12 +171,19 @@ or another in-tree crate.
 
 | Use | For |
 |-----|-----|
-| `kr::static_assert_layout!(T, size = S, align = A, field @ OFF, ...)` | **Every** `#[repr(C)]` mirror: exact size, align, and every field offset, with values taken from BTF |
+| `kr::static_assert_layout!(T, size = S, align = A, field @ OFF, ...)` | **Every** `#[repr(C)]` mirror: exact size, align, and every field offset, with exact values from BTF or generated C layout constants |
 | `kr::static_assert!` | Other compile-time facts |
 | `kr::Opaque<T>`, `kr::OpaqueBytes<N>` | Fields that are unported or config-dependent |
 | `kr::defer` | Scope-exit cleanup |
 
 Size is asserted as equal, never `<=`, because the mirror *is* the C type.
+For a config-independent layout, use values measured from BTF. For a layout
+that changes with configuration, Kbuild may generate size, alignment, and
+field offsets from the C compiler for the active config and pass those values
+to the same assertions. Keep config-dependent fields opaque in Rust. The unit
+record must compare the generated values with BTF or DWARF from at least two
+configs with different layouts. A mismatch fails the build; generated values
+are not a reason to omit any field assertion or to use the `bindings` crate.
 
 ## FFI: `<unit>_ffi.c`
 
