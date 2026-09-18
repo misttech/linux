@@ -785,8 +785,14 @@ $(obj)/kr.o: $(src)/kr/lib.rs $(obj)/compiler_builtins.o FORCE
 # unit exports its symbols from its own <unit>_ffi.c, with the license of the
 # C file, so this crate gets no exports_*_generated.h.
 $(obj)/main.o: private skip_flags = --edition=2021
-$(obj)/main.o: private rustc_target_flags = --edition=2024 --extern kr
-$(obj)/main.o: $(srctree)/main.rs $(obj)/kr.o FORCE
+$(obj)/main.o: private rustc_target_flags = --edition=2024 --extern kr \
+    @$(objtree)/include/generated/port-layout.cfg \
+    '--check-cfg=cfg(PORT_LOCKREF_FAST)' \
+    '--check-cfg=cfg(CONFIG_ARCH_DMA_ADDR_T_64BIT)' \
+    '--check-cfg=cfg(CONFIG_PROVE_RCU)'
+$(obj)/main.o: $(srctree)/main.rs $(obj)/kr.o \
+    $(objtree)/include/generated/port-layout.rs \
+    $(objtree)/include/generated/port-layout.cfg FORCE
 	+$(call if_changed_rule,rustc_library)
 
 $(obj)/bindings.o: private rustc_target_flags = --extern ffi --extern pin_init

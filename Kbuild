@@ -34,6 +34,42 @@ arch/$(SRCARCH)/kernel/asm-offsets.s: $(timeconst-file) $(bounds-file)
 $(offsets-file): arch/$(SRCARCH)/kernel/asm-offsets.s FORCE
 	$(call filechk,offsets,__ASM_OFFSETS_H__)
 
+# Generate per-config C layout facts for the in-place Rust ports. This is a
+# second pass because lockref.h itself includes bounds.h.
+port-layout-header := include/generated/port-layout.h
+port-layout-rs := include/generated/port-layout.rs
+port-layout-cfg := include/generated/port-layout.cfg
+
+targets += kernel/port-layout.s
+
+kernel/port-layout.s: $(bounds-file)
+
+$(port-layout-header): kernel/port-layout.s FORCE
+	$(call filechk,offsets,__PORT_LAYOUT_H__)
+
+define filechk_port_layout_rs
+	echo "// SPDX-License-Identifier: GPL-2.0"; \
+	echo "// Generated from the active C kernel configuration."; \
+	awk '/^#define PORT_LOCKREF_/ { \
+		type = ($$2 == "PORT_LOCKREF_DEAD_VAL" ? "i32" : "usize"); \
+		print "pub(crate) const " $$2 ": " type " = " $$3 ";"; \
+		if ($$2 == "PORT_LOCKREF_ALIGN") align = $$3; \
+	} END { \
+		print "#[repr(C, align(" align "))]"; \
+		print "pub(crate) struct LockrefAlign;"; \
+	}' $<
+endef
+
+$(port-layout-rs): $(port-layout-header) FORCE
+	$(call filechk,port_layout_rs)
+
+define filechk_port_layout_cfg
+	awk '/^#define PORT_LOCKREF_FAST 1 / { print "--cfg=PORT_LOCKREF_FAST" }' $<
+endef
+
+$(port-layout-cfg): $(port-layout-header) FORCE
+	$(call filechk,port_layout_cfg)
+
 # Generate rq-offsets.h
 
 rq-offsets-file := include/generated/rq-offsets.h
@@ -87,7 +123,7 @@ $(atomic-checks): $(obj)/.checked-%: include/linux/atomic/%  FORCE
 # A phony target that depends on all the preparation targets
 
 PHONY += prepare
-prepare: $(offsets-file) missing-syscalls $(atomic-checks)
+prepare: $(offsets-file) missing-syscalls $(atomic-checks) $(if $(CONFIG_RUST_KERNEL),$(port-layout-rs) $(port-layout-cfg))
 	@:
 
 # Ordinary directory descending
