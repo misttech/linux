@@ -67,7 +67,7 @@ obj-$(CONFIG_RUST_KERNEL) += lockref_ffi.o
 
 CONTEXT_ANALYSIS_rhashtable.o := y
 
-obj-y += bcd.o sort.o parser.o debug_locks.o random32.o \
+obj-y += sort.o parser.o debug_locks.o random32.o \
 	 bust_spinlocks.o kasprintf.o bitmap.o scatterlist.o \
 	 uuid.o iov_iter.o clz_ctz.o \
 	 bsearch.o find_bit.o lwq.o memweight.o \
@@ -85,6 +85,8 @@ obj-$(if $(CONFIG_RUST_KERNEL),,y) += errseq.o
 obj-$(CONFIG_RUST_KERNEL) += errseq_ffi.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += base64.o
 obj-$(CONFIG_RUST_KERNEL) += base64_ffi.o
+obj-$(if $(CONFIG_RUST_KERNEL),,y) += bcd.o
+obj-$(CONFIG_RUST_KERNEL) += bcd_ffi.o
 
 obj-y += string_helpers.o
 obj-y += hexdump.o

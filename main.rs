@@ -20,6 +20,9 @@ pub mod cmdline;
 #[path = "lib/base64.rs"]
 pub mod base64;
 
+#[path = "lib/bcd.rs"]
+pub mod bcd;
+
 #[path = "lib/ctype.rs"]
 pub mod ctype;
 
