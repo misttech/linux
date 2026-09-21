@@ -47,6 +47,9 @@ pub mod list_sort;
 #[path = "lib/lwq.rs"]
 pub mod lwq;
 
+#[path = "lib/plist.rs"]
+pub mod plist;
+
 #[path = "lib/ratelimit.rs"]
 pub mod ratelimit;
 
