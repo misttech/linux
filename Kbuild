@@ -52,7 +52,9 @@ define filechk_port_layout_rs
 	echo "// Generated from the active C kernel configuration."; \
 	awk '/^#define PORT_(LOCKREF|RATELIMIT|LWQ)_/ { \
 		type = ($$2 == "PORT_LOCKREF_DEAD_VAL" ? "i32" : "usize"); \
-		print "pub(crate) const " $$2 ": " type " = " $$3 ";"; \
+		val = $$3; \
+		if (type == "usize" && val ~ /^-/) val = "(" val "_isize) as usize"; \
+		print "pub(crate) const " $$2 ": " type " = " val ";"; \
 		if ($$2 == "PORT_LOCKREF_ALIGN") align = $$3; \
 	} END { \
 		print "#[repr(C, align(" align "))]"; \
