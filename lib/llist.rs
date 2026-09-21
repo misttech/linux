@@ -38,6 +38,12 @@ impl llist_node {
             next: AtomicPtr::new(ptr::null_mut()),
         }
     }
+
+    /// The `next` link, for the ports whose C structures embed an
+    /// `llist_node` and walk a chain they own.
+    pub(crate) fn next(&self) -> &AtomicPtr<llist_node> {
+        &self.next
+    }
 }
 
 impl Default for llist_node {
@@ -51,6 +57,15 @@ impl Default for llist_node {
 #[repr(C)]
 pub struct llist_head {
     first: AtomicPtr<llist_node>,
+}
+
+impl llist_head {
+    /// The `first` pointer, for the ports whose C structures embed an
+    /// `llist_head`. The list operations are generic over it, as
+    /// [`del_all()`] is.
+    pub(crate) fn first(&self) -> &AtomicPtr<llist_node> {
+        &self.first
+    }
 }
 
 // BTF of x86_64 kernels: one pointer each. 32-bit values are from pahole of
