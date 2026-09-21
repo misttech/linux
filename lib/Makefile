@@ -73,7 +73,7 @@ CONTEXT_ANALYSIS_rhashtable.o := y
 
 obj-y += bcd.o sort.o parser.o debug_locks.o random32.o \
 	 bust_spinlocks.o kasprintf.o bitmap.o scatterlist.o \
-	 uuid.o iov_iter.o clz_ctz.o \
+	 iov_iter.o clz_ctz.o \
 	 bsearch.o find_bit.o memweight.o \
 	 percpu-refcount.o rhashtable.o base64.o \
 	 once.o usercopy.o bucket_locks.o \
@@ -257,6 +257,8 @@ obj-$(CONFIG_DQL) += dynamic_queue_limits.o
 
 obj-$(if $(CONFIG_RUST_KERNEL),,$(CONFIG_GLOB)) += glob.o
 obj-$(if $(CONFIG_RUST_KERNEL),$(CONFIG_GLOB)) += glob_ffi.o
+obj-$(if $(CONFIG_RUST_KERNEL),,y) += uuid.o
+obj-$(CONFIG_RUST_KERNEL) += uuid_ffi.o
 
 obj-$(CONFIG_DIMLIB) += dim/
 obj-$(CONFIG_SIGNATURE) += digsig.o
