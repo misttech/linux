@@ -7,10 +7,13 @@
 #include <linux/kbuild.h>
 #include <linux/lockref.h>
 #include <linux/lwq.h>
+#include <linux/poison.h>
 #include <linux/ratelimit_types.h>
 
 int main(void)
 {
+	DEFINE(PORT_LIST_POISON1, (unsigned long)LIST_POISON1);
+	DEFINE(PORT_LIST_POISON2, (unsigned long)LIST_POISON2);
 	DEFINE(PORT_LWQ_SIZE, sizeof(struct lwq));
 	DEFINE(PORT_LWQ_ALIGN, __alignof__(struct lwq));
 	DEFINE(PORT_LWQ_LOCK_SIZE, sizeof(spinlock_t));
