@@ -50,6 +50,9 @@ pub mod ratelimit;
 #[path = "lib/rcuref.rs"]
 pub mod rcuref;
 
+#[path = "lib/sort.rs"]
+pub mod sort;
+
 #[path = "lib/timerqueue.rs"]
 pub mod timerqueue;
 
