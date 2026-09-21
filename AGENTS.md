@@ -308,3 +308,39 @@ Project decision: commits in this tree use kernel style.
 
 If agents keep making the same mistake, or a decision changes, propose an edit
 here. Do not add workarounds in code.
+
+### Proposed: printk LKMM access validation (pending acceptance)
+
+This proposal is not an active exception to the rules above. The printk
+ringbuffer reads ordinary payload memory speculatively and validates the
+descriptor afterward. A direct Rust translation fails Loom's data-race
+checks, including when descriptor operations are sequentially consistent.
+The in-tree `rust/kernel/sync/atomic.rs` already distinguishes LKMM from
+the userspace Rust memory model, but does not supply a contract for these
+bulk copies.
+
+For this port, investigate a split validation approach:
+
+- Keep all ringbuffer decisions, reservation, recycling and descriptor
+  validation in Rust. Keep headers and C callers unchanged.
+- Access intentionally racing C-owned memory only through a minimal C
+  boundary. Each helper must preserve an existing C access operation and
+  its barrier placement, with a documented U1 contract. This is not
+  permission to retain the C algorithm behind a wrapper.
+- Never form Rust references to concurrently recycled payloads. Copies
+  returned to Rust remain untrusted until descriptor validation succeeds;
+  lengths, offsets and bit validity must be checked before use.
+- Use Loom for protocols it can faithfully model. Preserve the failing
+  direct-translation diagnostic. An atomic payload model is a control,
+  not evidence that C's ordinary payload accesses are race-free.
+- Use LKMM/herd7 litmus tests for the C boundary's publication and reuse
+  ordering. Derive them from the source's named LMM barrier pairs and
+  document which properties and accesses the model does not cover.
+- Require a compiler/FFI argument for the boundary as well as layout,
+  differential, existing KUnit and C/Rust build validation. Passing herd7
+  alone does not establish Rust soundness or compiler correctness.
+
+If accepted, criterion 2 would allow this explicit combination of Loom
+and LKMM evidence for printk. Failure to establish the C/Rust boundary
+contract still stops the port; acceptance is permission to investigate,
+not certification of the implementation.
