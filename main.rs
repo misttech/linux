@@ -41,6 +41,9 @@ pub mod list_sort;
 #[path = "lib/ratelimit.rs"]
 pub mod ratelimit;
 
+#[path = "lib/rcu_ptr.rs"]
+pub mod rcu_ptr;
+
 #[path = "lib/rcuref.rs"]
 pub mod rcuref;
 
