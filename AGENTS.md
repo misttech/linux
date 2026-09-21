@@ -309,12 +309,11 @@ Project decision: commits in this tree use kernel style.
 If agents keep making the same mistake, or a decision changes, propose an edit
 here. Do not add workarounds in code.
 
-### Proposed: printk LKMM access validation (pending acceptance)
+### Printk LKMM access validation
 
-Merging PR #24 into `linux-rust` accepts and activates this scoped amendment
-to criterion 2. Until then, it is not an active exception: printk port
-reports must state that criterion 2 is tripped and the port is stopped.
-This proposal belongs here because it changes a project decision.
+The user approved using this scoped amendment while implementing printk
+in PR #24. This authorizes investigation and implementation with the
+validation below; it does not certify the C/Rust boundary or the port.
 
 The printk ringbuffer reads ordinary payload memory speculatively and
 validates the descriptor afterward. A direct Rust translation fails Loom's data-race
@@ -323,12 +322,13 @@ The in-tree `rust/kernel/sync/atomic.rs` already distinguishes LKMM from
 the userspace Rust memory model, but does not supply a contract for these
 bulk copies.
 
-Evidence: local, unpushed commit `818c24e` in `misttech/linux-rust`, on
+Evidence: commit `818c24e` in `misttech/linux-rust`, on
 `codex/gpt-6/feature/printk-port`, contains the reproducer at
 `harness/printk_ringbuffer/loom/` and the record at
 `units/printk_ringbuffer.md`. The speculative-copy test fails; the atomic
 payload control passes. This is a minimal feasibility model, not a model
-of the complete ringbuffer. The commit is not yet available on GitHub.
+of the complete ringbuffer. The diagnostic and subsequent validation
+commit `3edea95` are published on that branch.
 
 For this port, investigate a split validation approach:
 
@@ -356,7 +356,7 @@ For this port, investigate a split validation approach:
   differential, existing KUnit and C/Rust build validation. Passing herd7
   alone does not establish Rust soundness or compiler correctness.
 
-Upon acceptance by merging PR #24, criterion 2 allows this explicit
+For the authorized printk work, criterion 2 allows this explicit
 combination of Loom and LKMM evidence for printk only. All other ports
 remain subject to the original criterion. Failure to establish the C/Rust
 boundary contract still stops the port; acceptance is permission to investigate,
