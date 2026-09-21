@@ -37,7 +37,7 @@ lib-y := string.o vsprintf.o \
 	 rbtree.o radix-tree.o xarray.o \
 	 maple_tree.o idr.o extable.o irq_regs.o argv_split.o \
 	 flex_proportions.o \
-	 is_single_threaded.o plist.o decompress.o kobject_uevent.o \
+	 is_single_threaded.o decompress.o kobject_uevent.o \
 	 earlycpio.o seq_buf.o siphash.o \
 	 nmi_backtrace.o memcat_p.o \
 	 buildid.o objpool.o iomem_copy.o sys_info.o
@@ -47,6 +47,8 @@ lib-$(if $(CONFIG_RUST_KERNEL),,y) += ctype.o
 obj-$(CONFIG_RUST_KERNEL) += ctype_ffi.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += dec_and_lock.o
 obj-$(CONFIG_RUST_KERNEL) += dec_and_lock_ffi.o
+lib-$(if $(CONFIG_RUST_KERNEL),,y) += plist.o
+obj-$(CONFIG_RUST_KERNEL) += plist_ffi.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += ratelimit.o
 obj-$(CONFIG_RUST_KERNEL) += ratelimit_ffi.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += lwq.o
