@@ -56,5 +56,8 @@ pub mod timerqueue;
 #[path = "lib/refcount.rs"]
 pub mod refcount;
 
+#[path = "lib/uuid.rs"]
+pub mod uuid;
+
 #[path = "lib/win_minmax.rs"]
 pub mod win_minmax;
