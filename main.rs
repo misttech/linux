@@ -7,6 +7,10 @@
 
 #![no_std]
 
+#[cfg(CONFIG_PRINTK)]
+#[path = "kernel/printk/printk_ringbuffer.rs"]
+pub mod printk_ringbuffer;
+
 mod port_layout {
     include!(concat!(env!("OBJTREE"), "/include/generated/port-layout.rs"));
 }

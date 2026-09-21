@@ -5,7 +5,7 @@ obj-$(CONFIG_A11Y_BRAILLE_CONSOLE)	+= braille.o
 obj-$(CONFIG_PRINTK_INDEX)	+= index.o
 
 obj-$(CONFIG_PRINTK)                 += printk_support.o
-printk_support-y	             := printk_ringbuffer.o
+printk_support-y := $(if $(CONFIG_RUST_KERNEL),printk_ringbuffer_ffi.o,printk_ringbuffer.o)
 printk_support-$(CONFIG_SYSCTL)	     += sysctl.o
 
 obj-$(CONFIG_PRINTK_RINGBUFFER_KUNIT_TEST) += printk_ringbuffer_kunit_test.o

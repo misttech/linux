@@ -788,6 +788,7 @@ $(obj)/main.o: private skip_flags = --edition=2021
 $(obj)/main.o: private rustc_target_flags = --edition=2024 --extern kr \
     @$(objtree)/include/generated/port-layout.cfg \
     '--check-cfg=cfg(PORT_LOCKREF_FAST)' \
+    '--check-cfg=cfg(CONFIG_PRINTK)' \
     '--check-cfg=cfg(CONFIG_ARCH_DMA_ADDR_T_64BIT)' \
     '--check-cfg=cfg(CONFIG_PROVE_RCU)'
 $(obj)/main.o: $(srctree)/main.rs $(obj)/kr.o \
