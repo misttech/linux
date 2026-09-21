@@ -181,7 +181,10 @@ pub struct PrintkInfo {
     facility: u8,
     flags_level: u8,
     caller_id: u32,
-    execution_context: [u8; PORT_PRINTK_INFO_DEV_INFO - PORT_PRINTK_INFO_CALLER_ID - 4],
+    #[cfg(CONFIG_PRINTK_EXECUTION_CTX)]
+    caller_id2: u32,
+    #[cfg(CONFIG_PRINTK_EXECUTION_CTX)]
+    comm: [u8; PORT_PRINTK_INFO_COMM_SIZE],
     dev_info: [u8; PORT_PRINTK_INFO_DEV_INFO_SIZE],
 }
 
@@ -189,10 +192,16 @@ kr::static_assert_layout!(PrintkInfo,
     size = PORT_PRINTK_INFO_SIZE, align = PORT_PRINTK_INFO_ALIGN,
     seq @ PORT_PRINTK_INFO_SEQ, ts_nsec @ PORT_PRINTK_INFO_TS_NSEC,
     text_len @ PORT_PRINTK_INFO_TEXT_LEN, facility @ PORT_PRINTK_INFO_FACILITY,
-    flags_level @ (PORT_PRINTK_INFO_FACILITY + 1),
+    flags_level @ PORT_PRINTK_INFO_FLAGS_LEVEL,
     caller_id @ PORT_PRINTK_INFO_CALLER_ID,
-    execution_context @ (PORT_PRINTK_INFO_CALLER_ID + 4),
     dev_info @ PORT_PRINTK_INFO_DEV_INFO,
+);
+
+#[cfg(CONFIG_PRINTK_EXECUTION_CTX)]
+kr::static_assert_layout!(PrintkInfo,
+    size = PORT_PRINTK_INFO_SIZE, align = PORT_PRINTK_INFO_ALIGN,
+    caller_id2 @ PORT_PRINTK_INFO_CALLER_ID2,
+    comm @ PORT_PRINTK_INFO_COMM,
 );
 
 /// # Safety

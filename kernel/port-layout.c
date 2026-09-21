@@ -66,7 +66,17 @@ int main(void)
 	OFFSET(PORT_PRINTK_INFO_TS_NSEC, printk_info, ts_nsec);
 	OFFSET(PORT_PRINTK_INFO_TEXT_LEN, printk_info, text_len);
 	OFFSET(PORT_PRINTK_INFO_FACILITY, printk_info, facility);
+	DEFINE(PORT_PRINTK_INFO_FLAGS_LEVEL, offsetof(struct printk_info, facility) + 1);
 	OFFSET(PORT_PRINTK_INFO_CALLER_ID, printk_info, caller_id);
+#ifdef CONFIG_PRINTK_EXECUTION_CTX
+	OFFSET(PORT_PRINTK_INFO_CALLER_ID2, printk_info, caller_id2);
+	OFFSET(PORT_PRINTK_INFO_COMM, printk_info, comm);
+	DEFINE(PORT_PRINTK_INFO_COMM_SIZE, sizeof(((struct printk_info *)0)->comm));
+#else
+	DEFINE(PORT_PRINTK_INFO_CALLER_ID2, 0);
+	DEFINE(PORT_PRINTK_INFO_COMM, 0);
+	DEFINE(PORT_PRINTK_INFO_COMM_SIZE, 0);
+#endif
 	OFFSET(PORT_PRINTK_INFO_DEV_INFO, printk_info, dev_info);
 	DEFINE(PORT_PRINTK_INFO_DEV_INFO_SIZE, sizeof(struct dev_printk_info));
 #endif
