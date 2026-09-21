@@ -26,6 +26,9 @@ pub mod errseq;
 #[path = "lib/glob.rs"]
 pub mod glob;
 
+#[path = "lib/hlist.rs"]
+pub mod hlist;
+
 #[path = "lib/kref.rs"]
 pub mod kref;
 
