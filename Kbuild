@@ -50,7 +50,7 @@ $(port-layout-header): kernel/port-layout.s FORCE
 define filechk_port_layout_rs
 	echo "// SPDX-License-Identifier: GPL-2.0"; \
 	echo "// Generated from the active C kernel configuration."; \
-	awk '/^#define PORT_(LOCKREF|RATELIMIT|LWQ)_/ { \
+	awk '/^#define PORT_(LOCKREF|RATELIMIT|LWQ|LIST)_/ { \
 		type = ($$2 == "PORT_LOCKREF_DEAD_VAL" ? "i32" : "usize"); \
 		val = $$3; \
 		if (type == "usize" && val ~ /^-/) val = "(" val "_isize) as usize"; \
