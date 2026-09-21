@@ -76,6 +76,58 @@ kr::static_assert_layout!(__kfifo, size = 24, align = 8,
 kr::static_assert_layout!(__kfifo, size = 20, align = 4,
     r#in @ 0, out @ 4, mask @ 8, esize @ 12, data @ 16);
 
+/// The index operations the fifo's protocol turns on.
+///
+/// Implemented here for `AtomicU32`. The harness implements it for loom's
+/// atomic, so its model runs the code in this file rather than a copy of it -
+/// the same seam `lib/llist.rs` and `lib/refcount.rs` carry.
+///
+/// Both methods are plain accesses: the C reads and writes `fifo->in` and
+/// `fifo->out` as ordinary `unsigned int`, with no barrier and no annotation.
+/// `Relaxed` is what expresses that in Rust. The ordering lives in the
+/// `smp_wmb()` the copy helpers issue, not here.
+pub(crate) trait KfifoAtomic {
+    /// A plain `unsigned int` read.
+    fn read(&self) -> u32;
+
+    /// A plain `unsigned int` write.
+    fn write(&self, val: u32);
+}
+
+impl KfifoAtomic for AtomicU32 {
+    #[inline]
+    fn read(&self) -> u32 {
+        self.load(Ordering::Relaxed)
+    }
+
+    #[inline]
+    fn write(&self, val: u32) {
+        self.store(val, Ordering::Relaxed)
+    }
+}
+
+/// `kfifo_unused()`: `(fifo->mask + 1) - (fifo->in - fifo->out)`.
+///
+/// Generic over the atomic so the loom model can run this arithmetic, which
+/// is where a porting bug would most easily hide: every term wraps.
+pub(crate) fn fifo_unused<A: KfifoAtomic>(r#in: &A, out: &A, mask: u32) -> u32 {
+    mask.wrapping_add(1)
+        .wrapping_sub(r#in.read().wrapping_sub(out.read()))
+}
+
+/// `fifo->in - fifo->out`, the number of elements stored.
+pub(crate) fn fifo_len<A: KfifoAtomic>(r#in: &A, out: &A) -> u32 {
+    r#in.read().wrapping_sub(out.read())
+}
+
+/// `fifo->in += len`, or `fifo->out += len`.
+///
+/// The indices are free running and wrap; the C relies on unsigned addition
+/// being well defined, which `wrapping_add` is.
+pub(crate) fn advance<A: KfifoAtomic>(index: &A, add: u32) {
+    index.write(index.read().wrapping_add(add));
+}
+
 unsafe extern "C" {
     /// `kmalloc_array_node()`, a macro over `alloc_hooks`.
     fn c_kfifo_kmalloc_array_node(n: usize, size: usize, gfp: gfp_t, node: c_int) -> *mut c_void;
@@ -143,38 +195,36 @@ impl __kfifo {
     /// loads of `fifo->in` and `fifo->out`.
     #[inline]
     fn in_(&self) -> u32 {
-        self.r#in.load(Ordering::Relaxed)
+        self.r#in.read()
     }
 
     #[inline]
     fn out_(&self) -> u32 {
-        self.out.load(Ordering::Relaxed)
+        self.out.read()
     }
 
     /// `fifo->in += len`, after the barrier that publishes the data.
     #[inline]
     fn advance_in(&self, len: u32) {
-        self.r#in
-            .store(self.in_().wrapping_add(len), Ordering::Relaxed);
+        advance(&self.r#in, len);
     }
 
     /// `fifo->out += len`.
     #[inline]
     fn advance_out(&self, len: u32) {
-        self.out
-            .store(self.out_().wrapping_add(len), Ordering::Relaxed);
+        advance(&self.out, len);
     }
 
     /// `kfifo_unused()`: `(fifo->mask + 1) - (fifo->in - fifo->out)`.
     #[inline]
     fn unused(&self) -> u32 {
-        (self.mask.wrapping_add(1)).wrapping_sub(self.in_().wrapping_sub(self.out_()))
+        fifo_unused(&self.r#in, &self.out, self.mask)
     }
 
     /// `fifo->in - fifo->out`, the number of elements stored.
     #[inline]
     fn len(&self) -> u32 {
-        self.in_().wrapping_sub(self.out_())
+        fifo_len(&self.r#in, &self.out)
     }
 }
 
@@ -268,8 +318,8 @@ pub unsafe extern "C" fn __kfifo_alloc_node(
      */
     let size = roundup_pow_of_two(size as usize);
 
-    fifo.r#in.store(0, Ordering::Relaxed);
-    fifo.out.store(0, Ordering::Relaxed);
+    fifo.r#in.write(0);
+    fifo.out.write(0);
     fifo.esize = esize as c_uint;
 
     if size < 2 {
@@ -302,8 +352,8 @@ pub unsafe extern "C" fn __kfifo_free(fifo: *mut __kfifo) {
 
     // SAFETY: (U1) kfree() of the buffer this unit allocated, or of null.
     unsafe { kfree(fifo.data) };
-    fifo.r#in.store(0, Ordering::Relaxed);
-    fifo.out.store(0, Ordering::Relaxed);
+    fifo.r#in.write(0);
+    fifo.out.write(0);
     fifo.esize = 0;
     fifo.data = ptr::null_mut();
     fifo.mask = 0;
@@ -333,8 +383,8 @@ pub unsafe extern "C" fn __kfifo_init(
         size = rounddown_pow_of_two(size);
     }
 
-    fifo.r#in.store(0, Ordering::Relaxed);
-    fifo.out.store(0, Ordering::Relaxed);
+    fifo.r#in.write(0);
+    fifo.out.write(0);
     fifo.esize = esize as c_uint;
     fifo.data = buffer;
 
