@@ -6,10 +6,17 @@
 #define COMPILE_OFFSETS
 #include <linux/kbuild.h>
 #include <linux/lockref.h>
+#include <linux/lwq.h>
 #include <linux/ratelimit_types.h>
 
 int main(void)
 {
+	DEFINE(PORT_LWQ_SIZE, sizeof(struct lwq));
+	DEFINE(PORT_LWQ_ALIGN, __alignof__(struct lwq));
+	DEFINE(PORT_LWQ_LOCK_SIZE, sizeof(spinlock_t));
+	OFFSET(PORT_LWQ_LOCK, lwq, lock);
+	OFFSET(PORT_LWQ_READY, lwq, ready);
+	OFFSET(PORT_LWQ_NEW, lwq, new);
 	DEFINE(PORT_RATELIMIT_SIZE, sizeof(struct ratelimit_state));
 	DEFINE(PORT_RATELIMIT_ALIGN, __alignof__(struct ratelimit_state));
 	DEFINE(PORT_RATELIMIT_LOCK_SIZE, sizeof(raw_spinlock_t));
