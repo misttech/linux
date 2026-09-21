@@ -96,6 +96,12 @@ dangles. `llist` does not have this problem, which is why it was easy.
 - Say in the `# Safety` of the constructor who guarantees the memory stays put.
 - The differential test must build a list, then `memcpy` it, then walk it from C, to
   show what a move does.
+- An empty `hlist_head` is one NULL pointer, so it is `const`-initializable and may move
+  until something points into it: no in-place init and no U7 for it, and `HList::new()`
+  is `const`. Pin at the first link. A list that is used through a `Pin<Box<[HList]>>`
+  needs no unsafe; a head **embedded in a structure** needs a pin projection to reach it,
+  and a **static** head has no safe path at all. Count those per container in the
+  client (see the client test), and say so under kill criterion 3.
 
 ### 3. Node location: `Has*Node<Tag>`
 
@@ -117,6 +123,26 @@ one `list_head`). A single `HasListNode` trait per kind cannot say which field.
   names the C invariant (lock held, node on this list, object live).
 - Tag every block `// SAFETY: (Un)`. The raw deref of a node is U3, `Send` and `Sync`
   impls are U6, in-place init is U7. Code that *uses* the container has a budget of 0.
+- **Refuse a node that is already linked, and claim it atomically.** A second reference
+  to an object can offer it to a list its node is on, and linking a linked node leaves
+  that list pointing at it, at freed memory once the owner drops. C has no defence, and
+  a safe API needs one. Return the item on refusal. If two lists can have two locks, the
+  check and the mark must be one compare-exchange on a field of the node (`pprev`, or
+  `next`), from "free" to a marker: a check followed by a store lets both through. Put
+  the compare-exchange behind a one-method trait so that loom runs the port's own
+  function, and add a threaded test. Also give one field one tag: a marker trait
+  implemented by the macro, with the field's offset as a const parameter, makes a second
+  impl for the same field a coherence error.
+- **Derive the pointers a list stores from the object, not from a reference to its
+  node.** A pointer from `&Node` has the provenance of the node's bytes, and stepping
+  back by `OFFSET` to the object then uses it beyond them. The stores look right and
+  every test passes. Carry `NonNull<Node>` from `node_of(obj)` end to end and make a
+  reference only to load and store, and run Miri (below).
+- **Unsafe that is not a dereference.** A pin projection (`Pin::new_unchecked`,
+  `get_unchecked_mut`) fits no class of the taxonomy: U3 is a raw dereference and U7 is
+  in-place init. Tag it U7 with a comment that says so until `CLAUDE.md` gets a class
+  for it (proposal: U8, pin projection), and never argue it into U3. Keep them out of
+  `Drop` by giving `Drop` a helper that takes no `Pin`.
 - Keep the unsafe in a handful of private node helpers (`get_next`, `set_next`,
   `node_of`, `entry_of`), so the container methods read as safe code and the
   invariants are in one place to audit.
@@ -134,6 +160,13 @@ project exists to remove.
   out, so `list.remove(node)` accepts only nodes of that list. Pick a mechanism
   (a `with_list(|list| ...)` closure, or a token as in GhostCell), write down what it
   costs a caller in ergonomics, and prototype it in the harness before wiring it in.
+- Removal by node without the head (`hlist_del(&obj->node)`) is the operation kernel
+  code uses most on an hlist, and only a brand can offer it safely. Beware that "is on
+  this list" is not stable: a `Copy` node reference goes stale on removal, and the
+  object is freed. A sound brand needs a **linear** handle, returned once by the push
+  and consumed by the removal, and it is no help against C that unlinks the node. If
+  the port ships without it, say what a caller does instead (a cursor walk), and that
+  the operation is missing.
 - A node still reachable from C is not covered by any brand. State that in the
   unit record as the limit of the guarantee.
 
@@ -149,8 +182,12 @@ reclaims the rest on drop is the model (`llist.rs`).
 
 Decide which the container is, and test that mode:
 
-- **Caller holds a lock.** The API takes a witness for it, since a port cannot use
-  `kernel`'s lock guards: a reference to a small trait the caller implements.
+- **Caller holds a lock.** Either the API takes a witness for it, since a port cannot use
+  `kernel`'s lock guards (a reference to a small trait the caller implements), or, as
+  `hlist` does, `Pin<&mut List>` is the exclusivity, and the unsafe `from_raw()` that views
+  a C-owned head carries the lock obligation in its `# Safety`. The second is simpler and
+  costs no parameter; say which you chose. What a lock does not cover is a node shared
+  between two lists under two locks (the claim above).
 - **RCU** (`list_add_rcu()`, `list_for_each_entry_rcu()`). Publication is a `Release`
   store, the read is `Acquire`, and the dependency ordering C gets for free is lost:
   say so in the record and measure it on arm64.
@@ -200,21 +237,41 @@ Certify with checks. A test that only compares the order of elements is not enou
    traversal: a Rust `del` that forgets the poison or the cache passes an order check.
    This replaces Fuchsia's `allocated_in_rust` flag, because the interop is the thing
    under test. The harness allocates with `malloc`, where the kernel uses `kmalloc`.
+   Run the real header in the harness, not a copy: the stubs chain with `#include_next`
+   (`types.h`, `compiler.h`), guard what libc also defines (`__always_inline`), and stub
+   the context-analysis annotations (`__context_unsafe`). **Drive the two sides in a
+   mixed mode**: an implementation chosen at random for each operation, whose trace must
+   equal the pure C trace. And check the invariants of the C memory in the driver itself
+   (links point back, lists end, nodes are where a model says, off-list nodes are NULL or
+   poisoned), so a port that is wrong the same way in both modes still fails.
 3. **Loom** for any container with atomics or an RCU publication, through the trait
    seam, as `harness/llist/loom` does in linux-rust. Assert what must hold (nothing
    lost, nothing seen twice), not what one interleaving happens to do: the first
    two-dequeuer model of `lwq` asserted more than the C guarantees, and loom refuted it.
-4. **KUnit**: `LIST_KUNIT_TEST` (`lib/tests/list-test.c`) tests the C inlines, and
+   **Races.** Two threads that must meet need a spin rendezvous, not a futex barrier: the
+   barrier's wake-up skew hid a check-then-act claim in most runs. Loom finds it in every
+   run, which is why the claim goes behind a seam.
+4. **Miri.** A stand-in for the owner (`KRef` becomes a plain pointer) lets Miri build the
+   port without C. Run every operation against a model, under Stacked Borrows and Tree
+   Borrows. It finds provenance errors nothing else does, and it failed the first
+   `hlist` for the reason above. Miri is a rustup component: `rustup component add
+   --toolchain nightly miri rust-src`.
+5. **KUnit**: `LIST_KUNIT_TEST` (`lib/tests/list-test.c`) tests the C inlines, and
    `hashtable_test.c` the hlist ones. They are the oracle for the C side of the shared
    list. They do not exercise the Rust layer, so they do not replace item 2.
-5. **Mutants.** Mutate the port and confirm each test fails: swap `next` and `prev`,
+6. **Mutants.** Mutate the port and confirm each test fails: swap `next` and `prev`,
    skip the poison, skip the cache, leave a node linked after `del`. Record the
    survivors and the equivalent ones.
-6. **The client test that measures kill criterion 3.** Write a small client that uses the
+7. **The client test that measures kill criterion 3.** Write a small client that uses the
    container the way a leaf would, and count its `unsafe`. The budget is **0**. If a
    client needs `unsafe` at most call sites the abstraction buys nothing, which is
    the reason the project would stop.
-7. Test with each `ListItem` owner the harness can build (raw, `KRef<T>`, and `Box`,
+   Count by section, mechanically (per type, per container, call sites), and fail the
+   build if the call sites have any. Add compile-fail tests, one per misuse the types are
+   meant to stop (mutate while iterating, use after push, push to an unpinned list, move
+   a pinned list, write through an iterator, two cursors, two tags on a field), each with
+   its error code, next to a control that compiles.
+8. Test with each `ListItem` owner the harness can build (raw, `KRef<T>`, and `Box`,
    since the harness has `std`), with a macro that generates a module per owner, as
    Fuchsia does. Use stack-allocated objects for the raw tests, which cannot leak.
 
@@ -265,6 +322,18 @@ and build up to the ones with a cache or a lock.
 - Missing the debug validators, so a hardened kernel loses its corruption reports.
 - Keying the brand or the offset trait on the container kind alone, when one object sits
   on several lists of that kind.
+- Generated poison: `DEFINE()` prints a signed number, so `0xdead000000000000` arrives
+  as `-2401263026318606080`, and a `usize` constant cannot take it. Emit a negative value
+  as `(N_isize) as usize`.
+- A `macro_rules!` macro that the crate does not use is an `unused_macros` warning in a
+  kernel build: `#[macro_export]` it.
+- `KRef::get(&T)` in `lib/kref.rs` makes an owner from any reference, a stack object's
+  included, so a list of `KRef`s can end up pointing at a dead frame. Say so in the
+  record; it weakens the U4 argument.
+- Mutation runs that swap the source under one build directory: cargo trusts mtimes, so
+  a real file older than the mutant's is not rebuilt. `touch` it before the real run.
+- A generic function over the list's tag needs `Obj: HasHlistNode<T>` written out; the
+  associated type's bound is not implied when the type is fixed by `Target = Obj`.
 - `pahole -C <type> vmlinux` on a `CONFIG_RUST_KERNEL=y` kernel returns the Rust
   mirror. Read the C type from an `_ffi.o`.
 
