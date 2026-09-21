@@ -71,7 +71,7 @@ obj-$(CONFIG_RUST_KERNEL) += lockref_ffi.o
 
 CONTEXT_ANALYSIS_rhashtable.o := y
 
-obj-y += bcd.o sort.o parser.o debug_locks.o random32.o \
+obj-y += bcd.o parser.o debug_locks.o random32.o \
 	 bust_spinlocks.o kasprintf.o bitmap.o scatterlist.o \
 	 iov_iter.o clz_ctz.o \
 	 bsearch.o find_bit.o memweight.o \
@@ -259,6 +259,8 @@ obj-$(if $(CONFIG_RUST_KERNEL),,$(CONFIG_GLOB)) += glob.o
 obj-$(if $(CONFIG_RUST_KERNEL),$(CONFIG_GLOB)) += glob_ffi.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += uuid.o
 obj-$(CONFIG_RUST_KERNEL) += uuid_ffi.o
+obj-$(if $(CONFIG_RUST_KERNEL),,y) += sort.o
+obj-$(CONFIG_RUST_KERNEL) += sort_ffi.o
 
 obj-$(CONFIG_DIMLIB) += dim/
 obj-$(CONFIG_SIGNATURE) += digsig.o
