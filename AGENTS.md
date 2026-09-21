@@ -311,13 +311,24 @@ here. Do not add workarounds in code.
 
 ### Proposed: printk LKMM access validation (pending acceptance)
 
-This proposal is not an active exception to the rules above. The printk
-ringbuffer reads ordinary payload memory speculatively and validates the
-descriptor afterward. A direct Rust translation fails Loom's data-race
+Merging PR #24 into `linux-rust` accepts and activates this scoped amendment
+to criterion 2. Until then, it is not an active exception: printk port
+reports must state that criterion 2 is tripped and the port is stopped.
+This proposal belongs here because it changes a project decision.
+
+The printk ringbuffer reads ordinary payload memory speculatively and
+validates the descriptor afterward. A direct Rust translation fails Loom's data-race
 checks, including when descriptor operations are sequentially consistent.
 The in-tree `rust/kernel/sync/atomic.rs` already distinguishes LKMM from
 the userspace Rust memory model, but does not supply a contract for these
 bulk copies.
+
+Evidence: local, unpushed commit `818c24e` in `misttech/linux-rust`, on
+`codex/gpt-6/feature/printk-port`, contains the reproducer at
+`harness/printk_ringbuffer/loom/` and the record at
+`units/printk_ringbuffer.md`. The speculative-copy test fails; the atomic
+payload control passes. This is a minimal feasibility model, not a model
+of the complete ringbuffer. The commit is not yet available on GitHub.
 
 For this port, investigate a split validation approach:
 
@@ -327,6 +338,11 @@ For this port, investigate a split validation approach:
   boundary. Each helper must preserve an existing C access operation and
   its barrier placement, with a documented U1 contract. This is not
   permission to retain the C algorithm behind a wrapper.
+  The existing FFI rule remains binding: each helper is a single forwarding
+  call to an existing C function, inline or macro, with its prototype above
+  the definition. No helper loops, branches or new access algorithms are
+  authorized. If this boundary requires more, stop and propose a separate
+  amendment to the FFI rule.
 - Never form Rust references to concurrently recycled payloads. Copies
   returned to Rust remain untrusted until descriptor validation succeeds;
   lengths, offsets and bit validity must be checked before use.
@@ -340,7 +356,8 @@ For this port, investigate a split validation approach:
   differential, existing KUnit and C/Rust build validation. Passing herd7
   alone does not establish Rust soundness or compiler correctness.
 
-If accepted, criterion 2 would allow this explicit combination of Loom
-and LKMM evidence for printk. Failure to establish the C/Rust boundary
-contract still stops the port; acceptance is permission to investigate,
+Upon acceptance by merging PR #24, criterion 2 allows this explicit
+combination of Loom and LKMM evidence for printk only. All other ports
+remain subject to the original criterion. Failure to establish the C/Rust
+boundary contract still stops the port; acceptance is permission to investigate,
 not certification of the implementation.
