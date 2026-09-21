@@ -49,6 +49,8 @@ lib-$(if $(CONFIG_RUST_KERNEL),,y) += dec_and_lock.o
 obj-$(CONFIG_RUST_KERNEL) += dec_and_lock_ffi.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += ratelimit.o
 obj-$(CONFIG_RUST_KERNEL) += ratelimit_ffi.o
+obj-$(if $(CONFIG_RUST_KERNEL),,y) += lwq.o
+obj-$(CONFIG_RUST_KERNEL) += lwq_ffi.o
 lib-$(if $(CONFIG_RUST_KERNEL),,y) += timerqueue.o
 obj-$(CONFIG_RUST_KERNEL) += timerqueue_ffi.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += list_sort.o
@@ -72,7 +74,7 @@ CONTEXT_ANALYSIS_rhashtable.o := y
 obj-y += bcd.o sort.o parser.o debug_locks.o random32.o \
 	 bust_spinlocks.o kasprintf.o bitmap.o scatterlist.o \
 	 uuid.o iov_iter.o clz_ctz.o \
-	 bsearch.o find_bit.o lwq.o memweight.o \
+	 bsearch.o find_bit.o memweight.o \
 	 percpu-refcount.o rhashtable.o base64.o \
 	 once.o usercopy.o bucket_locks.o \
 	 generic-radix-tree.o bitmap-str.o
