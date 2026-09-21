@@ -255,7 +255,8 @@ obj-$(CONFIG_CLOSURES) += closure.o
 
 obj-$(CONFIG_DQL) += dynamic_queue_limits.o
 
-obj-$(CONFIG_GLOB) += glob.o
+obj-$(if $(CONFIG_RUST_KERNEL),,$(CONFIG_GLOB)) += glob.o
+obj-$(if $(CONFIG_RUST_KERNEL),$(CONFIG_GLOB)) += glob_ffi.o
 
 obj-$(CONFIG_DIMLIB) += dim/
 obj-$(CONFIG_SIGNATURE) += digsig.o
