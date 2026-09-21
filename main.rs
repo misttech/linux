@@ -23,6 +23,9 @@ pub mod dec_and_lock;
 #[path = "lib/errseq.rs"]
 pub mod errseq;
 
+#[path = "lib/glob.rs"]
+pub mod glob;
+
 #[path = "lib/kref.rs"]
 pub mod kref;
 
