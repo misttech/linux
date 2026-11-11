@@ -79,6 +79,7 @@ obj-y += bcd.o sort.o parser.o debug_locks.o random32.o \
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += refcount.o
 obj-$(CONFIG_RUST_KERNEL) += refcount_ffi.o
 obj-$(CONFIG_RUST_KERNEL) += kref_ffi.o
+obj-$(CONFIG_RUST_KERNEL) += rcu_ptr_ffi.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += llist.o
 obj-$(CONFIG_RUST_KERNEL) += llist_ffi.o
 obj-$(if $(CONFIG_RUST_KERNEL),,y) += rcuref.o
